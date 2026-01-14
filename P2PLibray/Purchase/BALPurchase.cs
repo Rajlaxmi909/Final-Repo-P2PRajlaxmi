@@ -445,7 +445,9 @@ namespace P2PLibray.Purchase
                                 : 0,
                             HasApproved = row.Table.Columns.Contains("HasApproved") && row["HasApproved"] != DBNull.Value
                                 ? Convert.ToInt32(row["HasApproved"])
-                                : 0
+                                : 0,
+                            ExpDate =row["ExpectedDate"].ToString()
+
 
                         });
 
@@ -908,7 +910,7 @@ namespace P2PLibray.Purchase
         /// <returns>List of POItem objects</returns>
         public async Task<List<POItem>> GetPOItemsByCodeVNK(string poCode)
         {
-            try
+            try 
             {
                 var dic = new Dictionary<string, string>
                 {
@@ -1613,6 +1615,33 @@ namespace P2PLibray.Purchase
         }
 
         /// <summary>
+        /// Returns requisition header details by PR code.
+        /// </summary>
+        public async Task<Purchase> GetPRByCodeDesSP(string prCode)
+        {
+            Purchase pr = null;
+
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            param.Add("@Flag", "GetPRByCodeDesSP");
+            param.Add("@PRCode", prCode);
+
+            using (SqlDataReader dr = await obj.ExecuteStoredProcedureReturnDataReader("PurchaseProcedure", param))
+            {
+                if (await dr.ReadAsync())
+                {
+                    pr = new Purchase();
+
+                    pr.PRCode = dr["PRCode"].ToString();
+                    pr.RequiredDate = Convert.ToDateTime(dr["RequiredDate"]);
+                    pr.FullName = dr["FullName"].ToString();
+                    pr.Status = dr["StatusName"].ToString();
+                    pr.Description = dr["Description"].ToString();
+                }
+            }
+            return pr;
+        }
+
+        /// <summary>
         /// Returns all items of a requisition by PR code.
         /// </summary>
         public async Task<List<Purchase>> GetPRItemsSP(string prCode)
@@ -2254,6 +2283,8 @@ namespace P2PLibray.Purchase
             var counts = new Purchase
             {
                 AllPR = 0,
+                AllPO =0,
+                RejectedPO=0,
                 ApprovedPR = 0,
                 PendingPR = 0,
                 Rejected = 0,
@@ -2286,6 +2317,8 @@ namespace P2PLibray.Purchase
                 }
 
                 counts.AllPR = await GetCountAsync("AllPRCountPRK");
+                counts.AllPO = await GetCountAsync("AllPOCountPRK");
+                counts.RejectedPO = await GetCountAsync("RejectPOCountPRK");
                 counts.ApprovedPR = await GetCountAsync("ApprovePRCountPRK");
                 counts.PendingPR = await GetCountAsync("PendingPRCountPRK");
                 counts.Rejected = await GetCountAsync("RejectPRCountPRK");
@@ -2376,12 +2409,19 @@ namespace P2PLibray.Purchase
         /// </summary>
         /// <returns> LIst Of All PR</returns>
 
-        public async Task<List<Purchase>> ShowAllPRPRK()
+        public async Task<List<Purchase>> ShowAllPRPRK(DateTime startDate, DateTime endDate)
         {
             try
             {
                 List<Purchase> lst = new List<Purchase>();
-                Dictionary<string, string> paradic = new Dictionary<string, string> { { "@Flag", "ShowAllPRPRK" } };
+                Dictionary<string, string> paradic = new Dictionary<string, string> 
+                {
+                    { "@Flag", "ShowAllPRPRK" },
+                    { "@StartDate", startDate.ToString("yyyy-MM-dd") },
+                     { "@EndDate", endDate.ToString("yyyy-MM-dd") }
+                
+
+            };
                 DataSet ds = await obj.ExecuteStoredProcedureReturnDS("PurchaseProcedure", paradic);
 
                 if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
@@ -2395,10 +2435,7 @@ namespace P2PLibray.Purchase
                         p.StatusName = row["StatusName"].ToString();
                         p.AddedDate = Convert.ToDateTime(row["AddedDate"].ToString());
                         p.AddedDateString = p.AddedDate.ToString("dd-MM-yyyy");
-                        p.ApprovedRejectedDate = Convert.ToDateTime(row["ApproveRejectedDate"].ToString());
-                        p.ApprovedRejectedDateString = p.ApprovedRejectedDate.ToString("dd-MM-yyyy");
-                        p.FullName = row["FullName"].ToString();
-                        p.Description = row["Description"].ToString();
+                       
                         lst.Add(p);
 
                     }
@@ -2411,6 +2448,59 @@ namespace P2PLibray.Purchase
                 throw new Exception("Error in ShowAllPRPRK", ex);
             }
         }
+
+
+
+        /// <summary>
+        /// This Function Show list of PO
+        /// </summary>
+        /// <returns> LIst Of All PO</returns>
+
+        public async Task<List<Purchase>> ShowAllPOPRK(DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                List<Purchase> lst = new List<Purchase>();
+                Dictionary<string, string> paradic = new Dictionary<string, string>
+                {
+                    { "@Flag", "ViewAllPOListPRK" },
+                    { "@StartDate", startDate.ToString("yyyy-MM-dd") },
+                     { "@EndDate", endDate.ToString("yyyy-MM-dd") }
+
+
+            };
+                DataSet ds = await obj.ExecuteStoredProcedureReturnDS("PurchaseProcedure", paradic);
+
+                if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
+                {
+                    foreach (DataRow row in ds.Tables[0].Rows)
+                    {
+                        Purchase p = new Purchase();
+
+                        p.POCode = row["POCode"].ToString();
+                        //p.Priority = row["Priority"].ToString();
+                        p.AddedDate = Convert.ToDateTime(row["AddedDate"].ToString());
+                        p.AddedDateString = p.AddedDate.ToString("dd-MM-yyyy");
+                        p.FullName = row["CreatedBy"].ToString();
+                        p.StatusName = row["StatusName"].ToString();
+
+                        lst.Add(p);
+
+                    }
+                }
+
+                return lst;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error in ShowAllPRPRK", ex);
+            }
+        }
+
+
+
+
+
 
         /// <summary>
         /// This Function Show Pending PR List
@@ -2581,12 +2671,17 @@ namespace P2PLibray.Purchase
         /// This Function Show Rejected PR List
         /// </summary>
         /// <returns>Show Rejected PR List</returns>
-        public async Task<List<Purchase>> ShowRejectedPRPRK()
+        public async Task<List<Purchase>> ShowRejectedPRPRK(DateTime startDate, DateTime endDate)
         {
             try
             {
                 List<Purchase> lst = new List<Purchase>();
-                Dictionary<string, string> paradic = new Dictionary<string, string> { { "@Flag", "ViewRejectedPRPRK" } };
+                Dictionary<string, string> paradic = new Dictionary<string, string> { 
+                    { "@Flag", "ViewRejectedPRPRK" },
+                     { "@StartDate", startDate.ToString("yyyy-MM-dd") },
+                     { "@EndDate", endDate.ToString("yyyy-MM-dd") }
+
+                };
                 DataSet ds = await obj.ExecuteStoredProcedureReturnDS("PurchaseProcedure", paradic);
 
                 if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
@@ -2598,8 +2693,11 @@ namespace P2PLibray.Purchase
                         p.PRCode = row["PRCode"].ToString();
                         p.AddedDate = Convert.ToDateTime(row["AddedDate"].ToString());
                         p.AddedDateString = p.AddedDate.ToString("dd-MM-yyyy");
+                        p.ApprovedRejectedDate = Convert.ToDateTime(row["ApproveRejectedDate"].ToString());
+                        p.ApprovedRejectedDateString = p.ApprovedRejectedDate.ToString("dd-MM-yyyy");
                         p.StatusName = row["StatusName"].ToString();
                         p.Priority = row["Priority"].ToString();
+                        p.FullName = row["FullName"].ToString();
                         p.Description = row["Description"].ToString();
 
                         lst.Add(p);
@@ -2613,6 +2711,55 @@ namespace P2PLibray.Purchase
                 throw new Exception("Error in ShowRejectedPRPRK", ex);
             }
         }
+
+
+        /// <summary>
+        /// This Function Show Rejected PR List
+        /// </summary>
+        /// <returns>Show Rejected PR List</returns>
+        public async Task<List<Purchase>> ShowRejectedPRmainPRK()
+        {
+            try
+            {
+                List<Purchase> lst = new List<Purchase>();
+                Dictionary<string, string> paradic = new Dictionary<string, string> {
+                    { "@Flag", "ViewRejectedmainPRPRK" }
+                    
+
+                };
+                DataSet ds = await obj.ExecuteStoredProcedureReturnDS("PurchaseProcedure", paradic);
+
+                if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
+                {
+                    foreach (DataRow row in ds.Tables[0].Rows)
+                    {
+                        Purchase p = new Purchase();
+
+                        p.PRCode = row["PRCode"].ToString();
+                        p.AddedDate = Convert.ToDateTime(row["AddedDate"].ToString());
+                        p.AddedDateString = p.AddedDate.ToString("dd-MM-yyyy");
+                        p.ApprovedRejectedDate = Convert.ToDateTime(row["ApproveRejectedDate"].ToString());
+                        p.ApprovedRejectedDateString = p.ApprovedRejectedDate.ToString("dd-MM-yyyy");
+                        p.StatusName = row["StatusName"].ToString();
+                        p.Priority = row["Priority"].ToString();
+                        p.FullName = row["FullName"].ToString();
+                        p.Description = row["Description"].ToString();
+
+                        lst.Add(p);
+                    }
+                }
+
+                return lst;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error in ShowRejectedPRPRK", ex);
+            }
+        }
+
+
+
+
 
 
         /// <summary>
@@ -2636,14 +2783,16 @@ namespace P2PLibray.Purchase
                 {
                     foreach (DataRow row in ds.Tables[0].Rows)
                     {
-                        lst.Add(new Purchase
-                        {
-                            PRCode = row["PRCode"].ToString(),
-                            ItemName = row["ItemName"].ToString(),
-                            UnitRates = row["UnitRates"].ToString(),
-                            //RequiredQuantity = row["RequiredQuantity"].ToString(),
-                            RequiredDate = Convert.ToDateTime(row["RequiredDate"].ToString())
-                        });
+                        Purchase p = new Purchase();
+
+
+                            p.PRCode = row["PRCode"].ToString();
+                            p.ItemName = row["ItemName"].ToString();
+                            p.UnitRates = row["UnitRates"].ToString();
+                            p.RequiredQuantity = Convert.ToInt32(row["RequiredQuantity"]);
+                        p.RequiredDate = Convert.ToDateTime(row["RequiredDate"].ToString());
+                        p.RequiredDateString = p.RequiredDate.ToString("dd-MM-yyyy");
+                        lst.Add(p);
                     }
                 }
 
@@ -2655,6 +2804,53 @@ namespace P2PLibray.Purchase
                 throw new Exception("Error in ShowRejectedPRItemPRK", ex);
             }
         }
+
+
+        /// <summary>
+        /// This Function Show Rejected PO List
+        /// </summary>
+        /// <returns>Show Rejected PO List</returns>
+        public async Task<List<Purchase>> ShowRejectedPOPRK(DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                List<Purchase> lst = new List<Purchase>();
+                Dictionary<string, string> paradic = new Dictionary<string, string> {
+                    { "@Flag", "ViewAllRejectedPOListPRK" },
+                     { "@StartDate", startDate.ToString("yyyy-MM-dd") },
+                     { "@EndDate", endDate.ToString("yyyy-MM-dd") }
+
+                };
+                DataSet ds = await obj.ExecuteStoredProcedureReturnDS("PurchaseProcedure", paradic);
+
+                if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
+                {
+                    foreach (DataRow row in ds.Tables[0].Rows)
+                    {
+                        Purchase p = new Purchase();
+
+                        p.POCode = row["POCode"].ToString();
+                        p.AddedDate = Convert.ToDateTime(row["AddedDate"].ToString());
+                        p.AddedDateString = p.AddedDate.ToString("dd-MM-yyyy");
+                        p.ApprovedRejectedDate = Convert.ToDateTime(row["ApprovedRejectedDate"].ToString());
+                        p.ApprovedRejectedDateString = p.ApprovedRejectedDate.ToString("dd-MM-yyyy");
+                        //p.StatusName = row["StatusName"].ToString();
+                        //p.Priority = row["Priority"].ToString();
+                        p.FullName = row["CreatedBy"].ToString();
+                        p.Description = row["Description"].ToString();
+
+                        lst.Add(p);
+                    }
+                }
+
+                return lst;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error in ShowRejectedPRPRK", ex);
+            }
+        }
+
 
 
         /// <summary>

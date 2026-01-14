@@ -1,15 +1,56 @@
 ﻿<!doctype html>
 
+
 @{
-    Layout = null;
-    string currentAction = ViewContext.RouteData.Values["action"].ToString();
-    string currentController = ViewContext.RouteData.Values["controller"].ToString();
     string role = Session["RoleId"] != null ? Session["RoleId"].ToString() : "";
-    if (Session["StaffCode"] == null)
+
+    // Define role-based home page
+    string homeAction = "";
+    string homeController = "";
+
+    switch (role)
     {
-        Response.Redirect("~/Account/Logout");
+        case "2":
+        case "3":
+        case "4":
+            homeAction = "InventoryDashboard";
+            homeController = "Inventory";
+            break;
+
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+            homeAction = "UserDashboardPRK";
+            homeController = "Purchase";
+            break;
+
+        case "10":
+        case "11":
+        case "12":
+            homeAction = "GRNDashboardRHK";
+            homeController = "GRN";
+            break;
+
+        case "13":
+        case "14":
+        case "15":
+            homeAction = "QCheckDashboardNAM";
+            homeController = "Quality";
+            break;
+
+        default:
+            homeAction = "InventoryDashboard";
+            homeController = "Home";
+            break;
     }
+
+    // Current context
+    string currentController = ViewContext.RouteData.Values["controller"].ToString();
+    string currentAction = ViewContext.RouteData.Values["action"].ToString();
 }
+
 <html class=" layout-navbar-fixed layout-menu-fixed layout-compact "
       data-skin="default" data-bs-theme="light"
       data-assets-path="~/Content/assets/">
@@ -28,7 +69,7 @@
 
     <!-- Vendors CSS -->
     <link rel="stylesheet" href="~/Content/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
-
+    <link rel="icon" type="image/x-icon" href="~/Content/images/Favicon-Procura.png">
     <!-- Custome CSS -->
     <link rel="stylesheet" href="~/Content/Site.css" />
 
@@ -90,7 +131,7 @@
 
     <!-- Email Sending JS -->
     <script src="~/Scripts/SendEmail.js"></script>
-
+    <title>@ViewBag.Title</title>
 
 
     <style>
@@ -172,6 +213,109 @@
         .buttons-csv {
             background: rgb(120, 129, 122, 0.30);
         }
+
+
+
+
+
+
+
+
+
+
+
+        table th {
+            border-top: none;
+            font-weight: 600;
+            white-space: nowrap; /* Prevents text wrapping */
+            text-overflow: ellipsis; /* Adds "..." if text is too long */
+            overflow: hidden; /* Hides overflow text */
+        }
+
+
+        /* Remove default stripe background */
+        table.dataTable.stripe tbody tr.odd,
+        table.dataTable.display tbody tr.odd,
+        table.dataTable tbody tr.odd {
+            background-color: #ffffff !important;
+        }
+
+        /* Even rows (ensure also white) */
+        table.dataTable.stripe tbody tr.even,
+        table.dataTable.display tbody tr.even,
+        table.dataTable tbody tr.even {
+            background-color: #ffffff !important;
+        }
+
+        /* Maintain hover highlight */
+        table.dataTable tbody tr:hover {
+            background-color: #f8f9fa !important;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        /* Table header remains dark */
+        table.dataTable thead th {
+            background-color: #212529 !important;
+            color: #ffffff !important;
+            text-align: center;
+        }
+
+        /* Optional: give entire table a clean white background */
+        table.dataTable {
+            background-color: #ffffff !important;
+            border-radius: 8px !important;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+
+        .table-responsive {
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        /*  Compact Table Row Size */
+        .table td, .table th {
+            padding: 0.35rem 0.5rem !important;
+            font-size: 0.78rem;
+            vertical-align: middle;
+        }
+
+        .btn-delete {
+            padding: 2px 6px !important;
+            font-size: 0.70rem !important;
+        }
+
+            .btn-delete i {
+                font-size: 0.75rem !important;
+            }
+
+
+        @@media (max-width: 768px) {
+            .form-control, .form-select, .btn, .table td, .table th {
+                font-size: 0.85rem;
+            }
+        }
+
+        button.dt-button.processing,
+        div.dt-button.processing {
+            pointer-events: auto !important;
+            opacity: 1 !important;
+            background: none !important;
+        }
+
+            button.dt-button.processing:after {
+                content: none !important;
+            }
+
+        #Logo {
+           
+            height: 60px;
+            width: 60px;
+        }
+        .app-brand {
+            margin-left:-10px !important;
+        }
     </style>
 
 
@@ -180,7 +324,7 @@
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5DDHKGP" height="0" width="0" style="display: none; visibility: hidden"></iframe></noscript>
 
     <!-- Layout wrapper -->
-    <div class="layout-wrapper layout-content-navbar bg-gradient-light ">
+    <div class="layout-wrapper layout-content-navbar " style="background-color:#eeeded">
         <div class="layout-container">
 
             <!-- Menu -->
@@ -189,21 +333,10 @@
                     <a href="index.html" class="app-brand-link gap-xl-0 gap-2">
                         <span class="app-brand-logo demo me-1">
                             <span class="text-primary">
-                                <svg width="30" height="24" viewBox="0 0 250 196" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.3002 1.25469L56.655 28.6432C59.0349 30.1128 60.4839 32.711 60.4839 35.5089V160.63C60.4839 163.468 58.9941 166.097 56.5603 167.553L12.2055 194.107C8.3836 196.395 3.43136 195.15 1.14435 191.327C0.395485 190.075 0 188.643 0 187.184V8.12039C0 3.66447 3.61061 0.0522461 8.06452 0.0522461C9.56056 0.0522461 11.0271 0.468577 12.3002 1.25469Z" fill="currentColor" />
-                                    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M0 65.2656L60.4839 99.9629V133.979L0 65.2656Z" fill="black" />
-                                    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M0 65.2656L60.4839 99.0795V119.859L0 65.2656Z" fill="black" />
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M237.71 1.22393L193.355 28.5207C190.97 29.9889 189.516 32.5905 189.516 35.3927V160.631C189.516 163.469 191.006 166.098 193.44 167.555L237.794 194.108C241.616 196.396 246.569 195.151 248.856 191.328C249.605 190.076 250 188.644 250 187.185V8.09597C250 3.64006 246.389 0.027832 241.935 0.027832C240.444 0.027832 238.981 0.441882 237.71 1.22393Z" fill="currentColor" />
-                                    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M250 65.2656L189.516 99.8897V135.006L250 65.2656Z" fill="black" />
-                                    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M250 65.2656L189.516 99.0497V120.886L250 65.2656Z" fill="black" />
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.2787 1.18923L125 70.3075V136.87L0 65.2465V8.06814C0 3.61223 3.61061 0 8.06452 0C9.552 0 11.0105 0.411583 12.2787 1.18923Z" fill="currentColor" />
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.2787 1.18923L125 70.3075V136.87L0 65.2465V8.06814C0 3.61223 3.61061 0 8.06452 0C9.552 0 11.0105 0.411583 12.2787 1.18923Z" fill="white" fill-opacity="0.15" />
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M237.721 1.18923L125 70.3075V136.87L250 65.2465V8.06814C250 3.61223 246.389 0 241.935 0C240.448 0 238.99 0.411583 237.721 1.18923Z" fill="currentColor" />
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M237.721 1.18923L125 70.3075V136.87L250 65.2465V8.06814C250 3.61223 246.389 0 241.935 0C240.448 0 238.99 0.411583 237.721 1.18923Z" fill="white" fill-opacity="0.3" />
-                                </svg>
+                                <img src="~/Content/images/Favicon-Procura.png" alt="LOGO" id="Logo" />
                             </span>
                         </span>
-                        <span class="app-brand-text demo menu-text fw-semibold ms-2">Materio</span>
+                        <span class="app-brand-text demo menu-text fw-semibold ">Procura</span>
                     </a>
 
                     <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
@@ -360,8 +493,8 @@
                     {
                         if (role == "2")
                         {
-                            <li class="menu-item @(currentAction == "Index" ? "active" : "")">
-                                <a href="@Url.Action("Index", "Inventory")" class="menu-link">
+                            <li class="menu-item @(currentAction == "InventoryDashboard" ? "active" : "")">
+                                <a href="@Url.Action("InventoryDashboard", "Inventory")" class="menu-link">
                                     <i class="menu-icon tf-icons bi bi-speedometer2"></i>
                                     <div class="fw-semibold">Inventory Dashboard</div>
                                 </a>
@@ -492,11 +625,11 @@
                                 </a>
                                 <ul class="menu-sub">
                                     @*<li class="menu-item @(currentAction == "CurrentStockReportAMG" ? "active" : "")">
-                                        <a href="@Url.Action("CurrentStockReportAMG", "Inventory")" class="menu-link">
-                                            <i class="menu-icon tf-icons bi bi-file-earmark-text"></i>
-                                            <div>Current Stock Reports</div>
-                                        </a>
-                                    </li>*@
+                                            <a href="@Url.Action("CurrentStockReportAMG", "Inventory")" class="menu-link">
+                                                <i class="menu-icon tf-icons bi bi-file-earmark-text"></i>
+                                                <div>Current Stock Reports</div>
+                                            </a>
+                                        </li>*@
                                     <li class="menu-item @(currentAction == "ReceivedMaterialReport" ? "active" : "")">
                                         <a href="@Url.Action("ReceivedMaterialReportAMG", "Inventory")" class="menu-link">
                                             <i class="menu-icon tf-icons bi bi-file-earmark-text"></i>
@@ -614,15 +747,32 @@
                         <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
                             <i class="icon-base ri ri-menu-line icon-md"></i>
                         </a>
+
                     </div>
                     <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
                         <!-- Search -->
                         <div class="navbar-nav align-items-center">
-                            <div class="nav-item navbar-search-wrapper mb-0">
-                                <a class="nav-item nav-link search-toggler px-0" href="javascript:void(0);">
-                                    <span class="d-inline-block text-body-secondary fw-normal" id="autocomplete"></span>
-                                </a>
-                            </div>
+                            <!-- Breadcrumbs -->
+                            <ol class="breadcrumb mb-0 mx-10">
+                                <li class="breadcrumb-item">
+                                    <a href="@Url.Action(homeAction, homeController)">
+                                        <i class="bi bi-house-door"></i> Home
+                                    </a>
+                                </li>
+
+                                @if (currentController != homeController)
+                                {
+                                    <li class="breadcrumb-item">
+                                        <a href="@Url.Action("Index", currentController)">
+                                            @currentController
+                                        </a>
+                                    </li>
+                                }
+
+                                <li class="breadcrumb-item active text-primary" aria-current="page">
+                                    @currentAction
+                                </li>
+                            </ol>
                         </div>
                         <!-- /Search -->
                         <ul class="navbar-nav flex-row align-items-center ms-md-auto">
@@ -777,6 +927,9 @@
                     </div>
                 </nav>
                 <!-- / Navbar -->
+                
+
+
                 <!-- Content wrapper -->
                 <div class="content-wrapper">
 
@@ -792,13 +945,13 @@
                                     </script>
                                     made with ❤️ by <a href="https://rahitechit.com/" target="_blank" class="footer-link fw-medium">Rahitech</a>
                                 </div>
-                                <div class="d-none d-lg-inline-block">
+                                @*<div class="d-none d-lg-inline-block">
                                     <a href="https://themeselection.com/item/category/admin-templates/" target="_blank" class="footer-link me-4">Admin Templates</a>
                                     <a href="https://themeselection.com/license/" class="footer-link me-4" target="_blank">License</a>
                                     <a href="https://themeselection.com/item/category/bootstrap-templates/" target="_blank" class="footer-link me-4">Bootstrap Dashboard</a>
                                     <a href="https://demos.themeselection.com/materio-bootstrap-html-admin-template/documentation/" target="_blank" class="footer-link me-4">Documentation</a>
                                     <a href="https://themeselection.com/support/" target="_blank" class="footer-link d-none d-sm-inline-block">Support</a>
-                                </div>
+                                </div>*@
                             </div>
                         </div>
                     </footer>

@@ -106,16 +106,6 @@
 
 @*Modal View*@
 
-
-@*<div class="modal fade" data-bs-backdrop="true" id="rfqVendorModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content shadow-lg rounded-3">
-            <div class="modal-header bg-primary text-white py-2 d-flex justify-content-center align-items-center rounded-top p-1">
-                <div class="w-100 text-center">
-                <h5 class="modal-title text-white mb-3 fs-5 p-1 fw-bold">RFQ Vendor Responses</h5>
-            </div>
-            <button type="button" class="btn-close btn-close-white mb-2" data-bs-dismiss="modal"></button>
-        </div>*@
 <div class="modal fade" id="rfqVendorModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content shadow-lg rounded-3">
@@ -126,7 +116,11 @@
                 <button type="button" class="btn-close btn-close-white position-absolute end-0 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-
+            <div class="mb-0 ms-5 mt-5" >
+                <h6 class="fw-bold">
+                    RFQ: <span id="lblRFQCode" class="text-primary"></span>
+                </h6>
+            </div>
 
             <div class="modal-body">
 
@@ -397,7 +391,7 @@
                     title: 'RFQ List',
                     text: '<i class="bi bi-file-earmark-pdf text-danger fs-5"></i>',
 
-                    
+
                     orientation: 'landscape',
                     pageSize: 'A4',
 
@@ -754,7 +748,7 @@
         function buildChart(rfqCodes, invitedData, respondedData, totalRFQs) {
             rfqChart = Highcharts.chart('rfqBarChart', {
                 chart: { type: 'column' },
-                title: { text: 'Vendors Invited vs Vendors Responded per RFQ' },
+                title: { text: null },
                 subtitle: {
                     text: '<span style="font-size:32px; font-weight:bold;">Total RFQs: ' + totalRFQs + '</span>',
                     align: 'left', verticalAlign: 'top', x: 10, y: 20, useHTML: true
@@ -845,6 +839,10 @@
         $(document).on('click', '.view-vendors', function () {
             var rfqCode = $(this).data('rfqcode');
 
+            // 🟦 Show RFQ Code at top of modal
+            $('#lblRFQCode').text(rfqCode);
+
+
             $.ajax({
                 url: '/Purchase/GetRFQVendorResponses',
                 type: 'GET',
@@ -861,16 +859,28 @@
                             $table.find('thead th').removeClass('sorting sorting_asc sorting_desc');
                         }
 
-                        // 🔹 Add new rows
+                        // 🔹 Add new rows with status color
                         $.each(res.data, function (i, item) {
+                            let statusBadge = `
+        <span class="${item.StatusName === 'Approved' ? 'badge bg-success' :
+                                item.StatusName === 'Pending' ? 'badge bg-warning' :
+                                    item.StatusName === 'Escalated' ? 'badge bg-primary' :
+                                        item.StatusName === 'Rejected' ? 'badge bg-danger' :
+                                            'badge bg-secondary'
+                                }">
+            ${item.StatusName}
+        </span>
+                            `;
+                            
+
                             $tbody.append(`
                         <tr>
                             <td>${i + 1}</td>
                             <td>${item.RegisterQuotationCode}</td>
                             <td>${item.VendorName}</td>
                             <td>${item.DaysToReceiveQuotation}</td>
-                            <td>${item.DaysToApproveQuotation}</td>
-                            <td>${item.StatusName}</td>
+                            <td>${item.DaysToApproveQuotation ?? ''}</td>
+                            <td class="text-center">${statusBadge}</td>
                         </tr>
                     `);
                         });
@@ -899,6 +909,9 @@
                 }
             });
         });
+
+
+
 
     });
 </script>

@@ -749,6 +749,7 @@ namespace P2PLibray.Account
                     podetails.ApprovedBy = dr["ApprovedBy"]?.ToString();
                     podetails.ShippingCharges = dr["ShippingCharges"] != DBNull.Value ? Convert.ToDecimal(dr["ShippingCharges"]) : 0;
                     podetails.AccountantName = dr["AccountantName"]?.ToString();
+                    podetails.Description = dr["Note"]?.ToString();
                 }
 
                 if (await dr.NextResultAsync())
@@ -816,6 +817,7 @@ namespace P2PLibray.Account
                         PODetails.ApprovedBy,
                         PODetails.AccountantName,
                         PODetails.ShippingCharges,
+                        PODetails.Description,
                         PODetails.Items,
                         TermConditions = PODetails.TermConditions ?? new List<string>()
                     }

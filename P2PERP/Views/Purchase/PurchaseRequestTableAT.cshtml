@@ -19,20 +19,13 @@
         </div>
 
         @*✅ Pie Chart Section with total count on left*@
-        <!--<div class="row mb-4">-->
         @*Chart on Right*@
-        <!--<div class="col-md-12">
-            <div class="card p-3 shadow h-100">
-                <h4 class="text-primary fw-bold text-center mb-3">PR Converted vs Not Converted</h4>
-                <div id="statusPieChart" style="height:350px;"></div>
-            </div>
-        </div>
-    </div>-->
+
         <div class="row mb-4">
             <!-- Chart 1: PR Converted vs Not Converted -->
             <div class="col-md-6">
                 <div class="card p-3 shadow h-100">
-                    <h4 class="text-primary fw-bold text-center mb-3">PR Converted vs Not Converted</h4>
+                    <h4 class="text-primary fw-bold text-center mb-3">PR Converted into RFQ </h4>
                     <div id="statusPieChart" style="height:350px;"></div>
                 </div>
             </div>
@@ -103,13 +96,6 @@
 
 @*Modal View*@
 
-@*<div class="modal fade" data-bs-backdrop="true" id="prItemsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white position-relative">
-                <h5 class="modal-title text-white w-100 text-center mb-2 fw-bold fs-5 p-1" >Purchase Requisition Items</h5>
-                <button type="button" class="btn-close btn-close-white position-absolute end-0 me-3 mb-2" data-bs-dismiss="modal"></button>
-            </div>*@
 <div class="modal fade" id="prItemsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content shadow-lg rounded-3">
@@ -852,42 +838,9 @@
             var dataArray = [];
             for (var key in data) dataArray.push({ name: key, y: data[key] });
 
-            //statusChart = Highcharts.chart('statusPieChart', {
-            //    chart: { type: 'pie' },
-            //    title: { text: 'Converted vs Not Converted to RFQ' },
-            //    subtitle: {
-            //        text: '<span style="font-size:32px; font-weight:bold;">Total PR: ' + totalPR + '</span>',
-            //        align: 'left', verticalAlign: 'top', x: 10, y: 20, useHTML: true
-            //    },
-            //    plotOptions: {
-            //        pie: {
-            //            allowPointSelect: true,
-            //            cursor: 'pointer',
-            //            dataLabels: {
-            //                enabled: true,
-            //                format: '<b>{point.name}</b>: {point.y}'
-            //            },
-            //            // ✅ add click event for filtering table
-            //            point: {
-            //                events: {
-            //                    click: function () {
-            //                        // this.name will be "Converted" or "Not Converted"
-            //                        var filterValue = this.name === 'Converted' ? 'Yes' : 'No';
-            //                        // search the ConvertedToRFQ column (index 5) for Yes/No
-            //                        table.column(5).search(filterValue).draw();
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    },
-            //    series: [{
-            //        name: 'Count',
-            //        colorByPoint: true,
-            //        data: dataArray
-            //    }]
             statusChart = Highcharts.chart('statusPieChart', {
                 chart: { type: 'pie' },
-                title: { text: 'PR to RFQ' },
+                title: { text: null }, // ✅ Disable the default "Chart title"
                 plotOptions: {
                     pie: {
                         allowPointSelect: true,

@@ -158,7 +158,6 @@
         overflow: hidden;
     }
 
-    /*  Compact Table Row Size */
     .table td, .table th {
         padding: 0.35rem 0.5rem !important;
         font-size: 0.78rem;
@@ -182,24 +181,38 @@
         }
     }
 
-        /* Remove space above export buttons */
         .dt-toolbar {
             margin-top: 0 !important;
             margin-bottom: 0 !important;
             padding-top: 0 !important;
         }
 
-        /* If DataTables automatically adds margin to the top row */
         div.dt-buttons {
             margin-top: 0 !important;
             margin-bottom: 0 !important;
             padding-top: 0 !important;
         }
 
-        /* Reduce gap between datepicker and export buttons */
         .ms-3 {
-            margin-bottom: 0.1rem !important; /* or 0 if you want zero spacing */
+            margin-bottom: 0.1rem !important; 
         }
+
+        .dt-toolbar {
+            margin-bottom: 8px !important; 
+        }
+
+        div.dt-buttons {
+            margin-bottom: 8px !important;
+        }
+
+        .dataTables_filter {
+            margin-bottom: 8px !important;
+        }
+
+        .hidcoln{
+            display:none;
+        }
+
 
     </style>
 
@@ -236,6 +249,7 @@
                                 <th>Sr No</th>
                                 <th>RFQ Code</th>
                                 <th>Added Date</th>
+                                <th class="hidcoln">ExpDate</th>
                                 <th>Added By</th>
                                 <th>Description</th>
                                 <th>Action</th>
@@ -266,21 +280,19 @@
         $(document).ready(function () {
             // Initialize tooltips
             $('[data-bs-toggle="tooltip"]').tooltip();
+            const today = new Date();
 
 
             function formatDateOnly(dateValue) {
                 if (!dateValue) return "";
 
-                // Try parsing with moment if available
                 if (moment(dateValue, ["YYYY-MM-DD", "YYYY/MM/DD", "DD-MM-YYYY", "DD/MM/YYYY"], true).isValid()) {
                     return moment(dateValue).format("DD/MM/YYYY");
                 }
 
-                // Fallback: handle manually if not detected by moment
-                let datePart = dateValue.split(' ')[0].replace(/-/g, '/'); // normalize - and /
+                let datePart = dateValue.split(' ')[0].replace(/-/g, '/'); 
                 let parts = datePart.split('/');
                 if (parts.length === 3) {
-                    // Check if first part is year
                     if (parts[0].length === 4) {
                         return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
                     } else {
@@ -465,7 +477,7 @@
 
                             // Count columns
                             var colCount = $('row:first c', sheet).length;
-                            if (colCount === 0) colCount = 6; // fallback if empty
+                            if (colCount === 0) colCount = 6; 
                             var lastCol = String.fromCharCode(64 + colCount);
 
                             // Shift all rows down by 2
@@ -610,6 +622,8 @@
                     { data: null, className: "text-center", orderable: false, render: (d, t, r, meta) => meta.row + 1 },
                     { data: 'RFQCode' },
                     { data: 'AddedDateVK', render: (d) => formatDateOnly(d) },
+                    { data: 'ExpDate', render: (d) => formatDateOnly(d),visible:false },
+
                     { data: 'FullName' },
                     { data: 'Description', render: (d) => `<span data-bs-toggle="tooltip" title="${d}">${d}</span>` },
                     {
@@ -618,7 +632,7 @@
                             console.log(row)
                             let registerBtn = '';
                             let viewBtn = ''
-                            if (row.HasUnregisteredVendors && Number(row.HasUnregisteredVendors) === 1 && Number(row.HasApproved) == 0) {
+                            if (row.HasUnregisteredVendors && Number(row.HasUnregisteredVendors) === 1 && Number(row.HasApproved) == 0 && formatDateOnly(row.ExpDate) > formatDateOnly(today)) {
                                 registerBtn = `<a class="btn btn-sm btn-success fs-5 ms-1 square-pill d-inline-flex align-items-center px-2 py-1 shadow"
                                         href="/Purchase/RegisterQuotationVNK?rfqCode=${encodeURIComponent(row.RFQCode)}&prCode=${encodeURIComponent(row.PRCode)}"
                                         title="Register Quotation" data-bs-toggle="tooltip">
@@ -627,11 +641,17 @@
                             }
                             if (row.AnyVendor && Number(row.AnyVendor) === 1) {
                                 viewBtn = `<a href="javascript:void(0)"
-                                    class="btn btn-sm btn-view fs-5  btn-icon-square btn-primary fs-6 square-pill d-inline-flex align-items-center px-2 py-1 shadow btn-view-quotation"
+                                    class="btn btn-sm btn-view fs-5 square-pill d-inline-flex align-items-center px-2 py-1 shadow  btn-icon-square btn-primary btn-view-quotation"
                                     data-rfq="${row.RFQCode}" data-pr="${row.PRCode}" data-unreg="${row.HasUnregisteredVendors}"
                                     data-bs-toggle="tooltip" title="View Quotation">
                                     <i class="bi bi-eye-fill fs-5"></i>
                                 </a>`};
+
+                            if (!registerBtn && !viewBtn) {
+                                //return 'Closed';
+                                return '<span style="background:red;color:white;padding:3px 6px;border-radius:4px;">Closed</span>';
+
+                            }
 
                             return `<div class="d-flex justify-content-center align-items-center">${viewBtn}${registerBtn}</div>`;
                         }

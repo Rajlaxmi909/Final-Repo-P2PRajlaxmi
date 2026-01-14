@@ -2,9 +2,10 @@
 
 
 <style>
-    #ViewItems3 thead th {
+    #ViewItems4 thead th {
         padding: 0.3rem 0.4rem !important;
     }
+
     .form-control, .form-select {
         border-radius: 0.5rem;
         border: 1px solid #ced4da;
@@ -62,6 +63,7 @@
             font-size: 0.85rem;
         }
     }
+
     button.dt-button.processing,
     div.dt-button.processing {
         pointer-events: auto !important;
@@ -76,7 +78,7 @@
 <!-- ===================== Main Container ===================== -->
 <div class="container mt-4">
     <div class="table-responsive">
-        <h3 class="text-center fw-bold text-primary">Approved Purchase Requisition</h3>
+        <h3 class="text-center fw-bold text-primary">Rejected Purchase Requisition</h3>
 
 
         <!-- Date Filters -->
@@ -85,15 +87,15 @@
                 <span class="input-group-text bg-primary text-white">
                     <i class="bi bi-calendar-date"></i> <!-- Calendar Icon -->
                 </span>
-                <input type="text" id="Rejectedrange3" placeholder="Select date Range" class="form-control form-control-sm  shadow-sm text-dark" readonly />
+                <input type="text" id="Rejectedrange4" placeholder="Select date Range" class="form-control form-control-sm  shadow-sm text-dark" readonly />
             </div>
         </div>
 
         <!-- 📋 Approve PR DataTable -->
-        <table id="TableApproved" class="table table-striped TableApproved table-bordered text-center" style="width:100%">
+        <table id="TableRejected" class="table table-striped TableRejected table-bordered text-center" style="width:100%">
             <thead class="table-dark">
                 <tr>
-                    <th><input type="checkbox" id="selectAll3" /></th><!-- Select All -->
+                    <th><input type="checkbox" id="selectAll4" /></th><!-- Select All -->
                     <th>SR.NO</th>
                     <th>PR CODE</th>
                     <th>ADDED DATE</th>
@@ -108,7 +110,7 @@
     </div>
 </div>
 <!-- ===================== View Modal ===================== -->
-<div class="modal fade" id="ApprovedModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="RejectededModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
 
@@ -135,27 +137,35 @@
 
                                     <div class="col">
                                         <label class="fw-bold text-dark">PR CODE :</label><br />
-                                        <span id="PRCODE3"></span>
+                                        <span id="PRCODE4"></span>
                                     </div>
 
                                     <div class="col">
                                         <label class="fw-bold text-dark">Required Date :</label><br />
-                                        <span id="RequiredDate3"></span>
+                                        <span id="RequiredDate4"></span>
                                     </div>
 
                                     <div class="col">
                                         <label class="fw-bold text-dark">Created By :</label><br />
-                                        <span id="FullName3"></span>
+                                        <span id="FullName4"></span>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2 mt-2 text-center">
+                                    <div class="col-3"></div> 
+
+                                    <div class="col-6">
+                                        <label class="fw-bold text-dark">Description :</label><br />
+                                        <span id="Description1"></span>
                                     </div>
 
-                                    <div class="col">
+                                    <div class="col-3">
                                         <label class="fw-bold text-dark">Status :</label><br />
-                                        <span id="Status3"></span>
+                                        <span id="Status4"></span>
                                     </div>
-
-
                                 </div>
                             </div>
+
 
 
 
@@ -167,7 +177,7 @@
                             <div>
                                 <h4 class="text-center fw-bold mb-3 text-primary">Item Details</h4>
                                 <div class="table-responsive">
-                                    <table id="ViewItems3" class="table table-bordered table-hover align-middle text-center mb-0">
+                                    <table id="ViewItems4" class="table table-bordered table-hover align-middle text-center mb-0">
                                         <thead class="table-dark text-black">
                                             <tr>
                                                 <th class="border-top-0">SR.NO</th>
@@ -213,13 +223,13 @@
 
         console.log("Initializing DataTable");
 
-        var selectedRowsApproved = [];
+        var selectedRowsRejected = [];
 
         // Initialize DataTable for Approve PR
-        var tableApproved = $('#TableApproved').DataTable({
+        var tableRejected = $('#TableRejected').DataTable({
             responsive: true,
             ajax: {
-                url: '/Purchase/GetApprovePRSP',
+                url: '/Purchase/GetRejectedPRSP',
                 type: "GET",
                 dataSrc: function (json) {
                     console.log("Data loaded:", json);
@@ -234,7 +244,7 @@
                     data: null,
                     orderable: false,
                     render: function (data, type, row) {
-                        return `<input type="checkbox" class="row-select3" data-id="${row.PRCode}">`;
+                        return `<input type="checkbox" class="row-select4" data-id="${row.PRCode}">`;
                     }
                 },
                 { // Serial Number
@@ -300,44 +310,23 @@
                         return '<span class="badge bg-success">' + data + '</span>';
                     }
                 },
-                {   // Action Buttons
+                {
                     data: null,
                     title: "Action",
                     className: 'no-export',
                     orderable: false,
                     render: function (data, type, row) {
-                        if (row.Status === "Pending") {
-                            // Show both Update and View buttons
-                            return `
-<button class="btn btn-sm btn-warning update-btn3 square-pill d-inline-flex align-items-center px-2 py-1 shadow-Update" data-bs-toggle="tooltip""
+                        return `
+<button class="btn btn-sm btn-primary view-btn4 square-pill d-inline-flex align-items-center px-2 py-1 shadow-View"
         data-id="${row.PRCode}"
         data-bs-toggle="modal"
-        data-bs-target="#updateapproeModal"
-        title="Update PR">
-    <i class="bi bi-pencil"></i>
-</button>
-<button class="btn btn-sm btn-primary view-btn3 square-pill d-inline-flex align-items-center px-2 py-1 shadow-View"
-        data-id="${row.PRCode}"
-        data-bs-toggle="modal"
-        data-bs-target="#ApprovedModal"
+        data-bs-target="#RejectededModal"
         title="View PR">
     <i class="bi bi-eye"></i>
 </button>`;
-                        } else if (row.Status === "Approved" || row.Status === "Rejected") {
-                            // Show only View button
-                            return `
-<button class="btn btn-sm btn-primary view-btn3 square-pill d-inline-flex align-items-center px-2 py-1 shadow-View"
-        data-id="${row.PRCode}"
-        data-bs-toggle="modal"
-        data-bs-target="#ApprovedModal"
-        title="View PR">
-    <i class="bi bi-eye"></i>
-</button>`;
-                        } else {
-                            return ''; // Optional: no buttons for other statuses
-                        }
                     }
                 }
+
             ],
             columnDefs: [
                 { className: "text-center", targets: "_all" }
@@ -352,13 +341,13 @@
                     exportOptions: {
                         // Print only selected rows
                         rows: function (idx, data, node) {
-                            return selectedRowsApproved.includes(data.PRCode);
+                            return selectedRowsRejected.includes(data.PRCode);
                         },
                         // Exclude 'no-export' and last column
                         columns: ':visible:not(.no-export):not(:last-child)'
                     },
                     action: function (e, dt, button, config) {
-                        if (!selectedRowsApproved || selectedRowsApproved.length === 0) {
+                        if (!selectedRowsRejected || selectedRowsRejected.length === 0) {
                             toastr.warning("Please select at least one PR before printing!");
                             return; // Stop print
                         }
@@ -427,11 +416,11 @@
                         // Include all visible columns except last one or 'no-export' class
                         columns: ':visible:not(.no-export):not(:last-child)',
                         rows: function (idx, data, node) {
-                            return selectedRowsApproved.includes(data.PRCode); // Only selected rows
+                            return selectedRowsRejected.includes(data.PRCode); // Only selected rows
                         }
                     },
                     action: function (e, dt, button, config) {
-                        if (!selectedRowsApproved || selectedRowsApproved.length === 0) {
+                        if (!selectedRowsRejected || selectedRowsRejected.length === 0) {
                             toastr.warning("Please select at least one PR before exporting!");
                             return;
                         }
@@ -506,7 +495,7 @@
                         doc.pageMargins = [40, 60, 40, 40];
                     }
                 }
-,  
+,
 
                 {
                     extend: 'excelHtml5',
@@ -514,14 +503,14 @@
                     title: '', // We'll insert title manually
                     exportOptions: {
                         rows: function (idx, data, node) {
-                            return selectedRowsApproved.includes(data.PRCode);
+                            return selectedRowsRejected.includes(data.PRCode);
                         },
                         columns: function (idx, data, node) {
-                            return !$(node).hasClass('no-export') && idx !== $('#TableApproved thead th').length - 1;
+                            return !$(node).hasClass('no-export') && idx !== $('#TableRejected thead th').length - 1;
                         }
                     },
                     action: function (e, dt, button, config) {
-                        if (!selectedRowsApproved || selectedRowsApproved.length === 0) {
+                        if (!selectedRowsRejected || selectedRowsRejected.length === 0) {
                             toastr.warning("Please select at least one PR before exporting!");
                             return; // Stop Excel export
                         }
@@ -532,7 +521,7 @@
                         var sheetData = $('sheetData', sheet);
 
                         // Count table columns
-                        var headerCount = $('#TableApproved thead th').length;
+                        var headerCount = $('#TableRejected thead th').length;
                         if (headerCount <= 0) headerCount = 1;
 
                         // Convert column number → Excel column letter (A, B, C, ...)
@@ -640,7 +629,7 @@
                     title: 'PR Report',
                     exportOptions: {
                         rows: function (idx, data, node) {
-                            return selectedRowsApproved.includes(data.PRCode);
+                            return selectedRowsRejected.includes(data.PRCode);
                         },
                         columns: ':not(.no-export):not(:last-child)' // Exclude action/hidden columns
                     },
@@ -678,7 +667,7 @@
                         return lines.join('\n');
                     },
                     action: function (e, dt, button, config) {
-                        if (!selectedRowsApproved || selectedRowsApproved.length === 0) {
+                        if (!selectedRowsRejected || selectedRowsRejected.length === 0) {
                             toastr.warning("Please select at least one PR before exporting!");
                             return;
                         }
@@ -694,42 +683,31 @@
 
         function initTooltips() {
             var selector = '[title], [data-bs-title]';
-            var els = document.querySelectorAll(selector);
+            var els = Array.prototype.slice.call(document.querySelectorAll(selector));
 
             els.forEach(function (el) {
-                // Dispose existing tooltip if any
                 var existing = bootstrap.Tooltip.getInstance(el);
                 if (existing) existing.dispose();
 
-                // Check if element actually has a title value
-                var hasTitle = el.getAttribute('title') && el.getAttribute('title').trim() !== '';
-                var hasDataTitle = el.getAttribute('data-bs-title') && el.getAttribute('data-bs-title').trim() !== '';
+                var hasTitle = el.getAttribute('title')?.trim() !== '';
+                var hasDataTitle = el.getAttribute('data-bs-title')?.trim() !== '';
 
-                // Initialize tooltip only if title exists
                 if (hasTitle || hasDataTitle) {
                     new bootstrap.Tooltip(el, { container: 'body' });
                 }
             });
         }
 
-        // ✅ Initialize tooltips on first load
         initTooltips();
+        $('#TableRejected').on('draw.dt', initTooltips);
+        $('#RejectededModal').on('shown.bs.modal', initTooltips);
 
-        // ✅ Re-initialize after DataTable redraw (dynamic rows)
-        $('#TableApproved').on('draw.dt', function () {
-            initTooltips();
-        });
-
-        // ✅ Re-initialize inside modal (required if tooltip inside modal)
-        $('#ApprovedModal').on('shown.bs.modal', function () {
-            initTooltips();
-        });
-
-        // ✅ Hide tooltip when clicking the button that opens modal
-        $(document).on("click", "[data-bs-toggle='modal']", function () {
+        // ✅ Dispose tooltip on button click so it disappears immediately
+        $(document).on("click", ".view-btn4", function () {
             var tooltip = bootstrap.Tooltip.getInstance(this);
             if (tooltip) tooltip.dispose();
         });
+
 
 
 
@@ -739,10 +717,10 @@
         var tableStartDate = null;
         var tableEndDate = null;
 
-        var table = $('#TableApproved').DataTable();
+        var table = $('#TableRejected').DataTable();
 
         // Initialize Date Range Picker
-        $('#Rejectedrange3').daterangepicker({
+        $('#Rejectedrange4').daterangepicker({
             autoUpdateInput: false,
             locale: {
                 format: 'DD/MM/YYYY',
@@ -758,7 +736,7 @@
         });
 
         // Apply filter on selection
-        $('#Rejectedrange3').on('apply.daterangepicker', function (ev, picker) {
+        $('#Rejectedrange4').on('apply.daterangepicker', function (ev, picker) {
             tableStartDate = picker.startDate;
             tableEndDate = picker.endDate;
 
@@ -781,7 +759,7 @@
         });
 
         // Reset filter on cancel
-        $('#Rejectedrange3').on('cancel.daterangepicker', function (ev, picker) {
+        $('#Rejectedrange4').on('cancel.daterangepicker', function (ev, picker) {
             tableStartDate = null;
             tableEndDate = null;
             $(this).val('');
@@ -796,50 +774,50 @@
 
 
         // Row Selection
-        $(document).on('change', '.row-select3', function () {
+        $(document).on('change', '.row-select4', function () {
             let id = $(this).data('id');
 
             if (this.checked) {
-                if (!selectedRowsApproved.includes(id)) {
-                    selectedRowsApproved.push(id);
+                if (!selectedRowsRejected.includes(id)) {
+                    selectedRowsRejected.push(id);
                 }
             } else {
-                selectedRowsApproved = selectedRowsApproved.filter(x => x !== id);
+                selectedRowsRejected = selectedRowsRejected.filter(x => x !== id);
             }
 
             // ✅ Update "Select All" checkbox automatically
-            var allChecked = $('.row-select3').length === $('.row-select3:checked').length;
-            $('#selectAll3').prop('checked', allChecked);
+            var allChecked = $('.row-select4').length === $('.row-select4:checked').length;
+            $('#selectAll4').prop('checked', allChecked);
         });
 
         // ✅ Select All Checkbox
-        $(document).on('click', '#selectAll3', function () {
+        $(document).on('click', '#selectAll4', function () {
             var checked = this.checked;
-            $('.row-select3').each(function () {
+            $('.row-select4').each(function () {
                 $(this).prop('checked', checked).trigger('change');
             });
         });
     });
 
     // ===================== View Modal Loader =====================
-    $(document).on("click", ".view-btn3", function () {
+    $(document).on("click", ".view-btn4", function () {
         var prCode = $(this).data("id");
 
         // First Ajax: Load Requisition Info
         $.ajax({
-            url: '/Purchase/DetailsPartialSP',
+            url: '/Purchase/DescriptionSP',
             type: 'POST',
             data: { id: prCode },
             success: function (response) {
                 if (response.success) {
                     var formattedDate = moment(response.data.RequiredDate).format("DD/MM/YYYY");
 
-                    $("#PRCODE3").text(response.data.PRCode);
-                    $("#RequiredDate3").text(formattedDate);
-                    $("#FullName3").text(response.data.FullName);
-                    $("#Status3").text(response.data.Status);
+                    $("#PRCODE4").text(response.data.PRCode);
+                    $("#RequiredDate4").text(formattedDate);
+                    $("#FullName4").text(response.data.FullName);
+                    $("#Status4").text(response.data.Status);
+                    $("#Description1").text(response.data.Description);
 
-                   
                 }
             },
             error: function (xhr, status, error) {
@@ -848,12 +826,12 @@
         });
 
         // Destroy if already initialized
-        if ($.fn.DataTable.isDataTable('#ViewItems3')) {
-            $('#ViewItems3').DataTable().clear().destroy();
+        if ($.fn.DataTable.isDataTable('#ViewItems4')) {
+            $('#ViewItems4').DataTable().clear().destroy();
         }
 
         // Second Ajax: Load Items into DataTable
-        $('#ViewItems3').DataTable({
+        $('#ViewItems4').DataTable({
             responsive: true,
             paging: true,
             searching: true,
@@ -964,10 +942,11 @@
             `);
 
                         // Read values
-                        let prCode = $("#PRCODE3").text();
-                        let reqDate = $("#RequiredDate3").text();
-                        let fullName = $("#FullName3").text();
-                        let status = $("#Status3").text();
+                        let prCode = $("#PRCODE4").text();
+                        let reqDate = $("#RequiredDate4").text();
+                        let fullName = $("#FullName4").text();
+                        let status = $("#Status4").text();
+                        let desc = $("#Description1").text();
 
                         // Header HTML
                         let headerHtml = `
@@ -984,6 +963,9 @@
         <td><b>Created By :</b> ${fullName}</td>
         <td><b>Status :</b> ${status}</td>
     </tr>
+    <tr>
+    <td><b>Description :</b> ${desc}</td>
+</tr>
 </table>
 `;
 

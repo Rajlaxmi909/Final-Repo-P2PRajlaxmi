@@ -103,6 +103,7 @@ namespace P2PLibray.Inventory
     public class InventoryDRB
     {
         public string GRNCode { get; set; }
+        public string SupplierName { get; set; }
         public string AddedDate { get; set; }
 
         //public string StatusName { get; set; }
@@ -213,10 +214,10 @@ namespace P2PLibray.Inventory
         public string MaxQuantity { get; set; }
     }
 
-    public class SaveItemBinAssignmentDRB
+    public class SaveItemBinAssignmentDRB:InventoryBinDRB
     {
         public string GRNItemCode { get; set; }
-        public string BinCode { get; set; }
+        //public string BinCode { get; set; }
         public string QuantityStored { get; set; }
         public string CreatedDate { get; set; }
 

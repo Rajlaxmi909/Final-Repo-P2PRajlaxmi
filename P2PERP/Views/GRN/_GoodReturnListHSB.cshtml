@@ -1,23 +1,26 @@
 ﻿@*<h4 class="text-center text-primary fw-bold">Goods Return List</h4>*@
 
 <!-- Date Filters -->
-<div class="mb-3 d-flex gap-2 mt-5">
-    <div class="input-group" style="max-width: 280px;">
+<div class="mb-3 d-flex align-items-center justify-content-between flex-wrap mt-5">
+
+    <!-- Date Range Picker -->
+    <div class="input-group input-group-sm" style="max-width: 280px;">
         <span class="input-group-text bg-primary text-white">
-            <i class="bi bi-calendar-date"></i> <!-- Bootstrap icon -->
+            <i class="bi bi-calendar-date"></i>
         </span>
-        <input type="text" id="returnGoodsRange" class="form-control" placeholder="Select date range" readonly />
+        <input type="text" id="returnGoodsRange" class="form-control form-control-sm"
+               placeholder="Select date range" readonly />
     </div>
 
+    <!-- Title -->
+    <div class="flex-grow-1 text-center">
+        <h4 class="text-primary fw-bold mb-0">Goods Return List</h4>
+    </div>
 
-    <div style="margin-left:190px;">
-        <h4 class="text-center text-primary fw-bold">Goods Return List</h4>
+    <div class="flex-grow-1 text-center">
 
     </div>
-    <!-- Reset Filter Button -->
-    @*<button id="resetFilter" class="btn btn-primary">
-            <i class="bi bi-arrow-repeat"></i> Reset
-        </button>*@
+
 </div>
 
 
@@ -486,7 +489,7 @@
                     extend: 'excelHtml5',
                     text: '<i class="bi bi-file-earmark-excel-fill text-success fs-5"></i>',
                     sheetName: 'Good Return List',
-                    filename:'GoodReturnList',
+                    filename: 'GoodReturnList',
                     title: null,
                     exportOptions: {
                         columns: [1, 2, 3, 4, 5, 6, 7],

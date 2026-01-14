@@ -253,62 +253,58 @@
 
             <!-- Body -->
             <div class="modal-body">
-                <form class="row g-3">
-
+                <div class="row g-3">
                     <!-- Row Code -->
                     <div class="col-md-6">
-                        <label for="vRowCode" class="form-label fw-bold text-dark">Row Code</label>
-                        <input type="text" class="form-control form-control-sm bg-light shadow-sm text-dark" id="vRowCode" readonly>
+                        <label class="form-label fw-bold text-dark">Row Code</label>
+                        <div class="text-dark" id="vRowCode">-</div>
                     </div>
 
                     <!-- Row Name -->
                     <div class="col-md-6">
-                        <label for="vRowName" class="form-label fw-bold text-dark">Row Name</label>
-                        <input type="text" class="form-control form-control-sm bg-light shadow-sm text-dark" id="vRowName" readonly>
+                        <label class="form-label fw-bold text-dark">Row Name</label>
+                        <div class="text-dark" id="vRowName">-</div>
                     </div>
 
                     <!-- Warehouse -->
                     <div class="col-md-6">
-                        <label for="vWarehouseName" class="form-label fw-bold text-dark">Warehouse Name</label>
-                        <input type="text" class="form-control form-control-sm bg-light shadow-sm text-dark" id="vWarehouseName" readonly>
+                        <label class="form-label fw-bold text-dark">Warehouse Name</label>
+                        <div class="text-dark" id="vWarehouseName">-</div>
                     </div>
 
                     <!-- Section -->
                     <div class="col-md-6">
-                        <label for="vSectionName" class="form-label fw-bold text-dark">Section Name</label>
-                        <input type="text" class="form-control form-control-sm bg-light shadow-sm text-dark" id="vSectionName" readonly>
+                        <label class="form-label fw-bold text-dark">Section Name</label>
+                        <div class="text-dark" id="vSectionName">-</div>
                     </div>
 
                     <!-- Rack -->
                     <div class="col-md-6">
-                        <label for="vRackName" class="form-label fw-bold text-dark">Rack Name</label>
-                        <input type="text" class="form-control form-control-sm bg-light shadow-sm text-dark" id="vRackName" readonly>
+                        <label class="form-label fw-bold text-dark">Rack Name</label>
+                        <div class="text-dark" id="vRackName">-</div>
                     </div>
 
                     <!-- Description -->
                     <div class="col-12">
-                        <label for="vDescription" class="form-label fw-bold text-dark">Description</label>
-                        <textarea class="form-control form-control-sm bg-light shadow-sm text-dark" id="vDescription" rows="2" readonly></textarea>
+                        <label class="form-label fw-bold text-dark">Description</label>
+                        <div class="text-dark" id="vDescription">-</div>
                     </div>
 
                     <!-- Added Info -->
                     <div class="col-md-6">
-                        <label for="vAddedDate" class="form-label fw-bold text-dark">Added Date</label>
-                        <input type="text" class="form-control form-control-sm bg-light shadow-sm text-dark" id="vAddedDate" readonly>
+                        <label class="form-label fw-bold text-dark">Added Date</label>
+                        <div class="text-dark" id="vAddedDate">-</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="vAddedBy" class="form-label fw-bold text-dark">Added By</label>
-                        <input type="text" class="form-control form-control-sm bg-light shadow-sm text-dark" id="vAddedBy" readonly>
+                        <label class="form-label fw-bold text-dark">Added By</label>
+                        <div class="text-dark" id="vAddedBy">-</div>
                     </div>
-
-                </form>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-
 <script>
     $(document).ready(function () {
         // ================= CONFIGURATION & CONSTANTS =================
@@ -1045,14 +1041,14 @@
         function viewRow(id) {
             $.get(CONFIG.urls.getRowById, { rowId: id }, function (res) {
                 if (res) {
-                    $("#vRowCode").val(res.RowCode || '');
-                    $("#vRowName").val(res.RowName || '');
-                    $("#vRackName").val(res.RackName || '');
-                    $("#vSectionName").val(res.SectionName || '');
-                    $("#vWarehouseName").val(res.WarehouseName || '');
-                    $("#vDescription").val(res.Description || "-");
-                    $("#vAddedBy").val(res.AddedBy || '');
-                    $("#vAddedDate").val(utils.formatDate(res.AddedDate) || "N/A");
+                    $("#vRowCode").text(res.RowCode || '-');
+                    $("#vRowName").text(res.RowName || '-');
+                    $("#vRackName").text(res.RackName || '-');
+                    $("#vSectionName").text(res.SectionName || '-');
+                    $("#vWarehouseName").text(res.WarehouseName || '-');
+                    $("#vDescription").text(res.Description || "-");
+                    $("#vAddedBy").text(res.AddedBy || '-');
+                    $("#vAddedDate").text(utils.formatDate(res.AddedDate) || "N/A");
                     $(CONFIG.selectors.viewModal).modal("show");
                 } else {
                     utils.handleError("Row details not found");

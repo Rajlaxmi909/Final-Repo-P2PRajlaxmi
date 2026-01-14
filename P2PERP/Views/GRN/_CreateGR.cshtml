@@ -68,7 +68,7 @@
                                 <td>@Html.HiddenFor(m => m.Items[i].ItemName) @Model.Items[i].ItemName</td>
                                 <td>@Html.DisplayFor(m => m.Items[i].Qty)</td>
                                 <td>@Html.HiddenFor(m => m.Items[i].UOM) @Model.Items[i].UOM</td>
-                                <td style="white-space: nowrap;">₹ @Html.DisplayFor(m => m.Items[i].Amount)</td>
+                                <td style="white-space: nowrap;">₹ @Html.DisplayFor(m => m.Items[i].UnitRate)</td>
                                 <td class="rupee-inline">₹@String.Format("{0:N2}", Model.Items[i].Amount)</td>
                                 <td>@Html.DisplayFor(m => m.Items[i].Reason)</td>
                                 <td>@Html.DisplayFor(m => m.Items[i].SampleTestFailed)</td>

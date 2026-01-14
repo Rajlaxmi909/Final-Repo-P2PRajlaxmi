@@ -134,28 +134,29 @@
                         <div class="card-body p-3">
 
                             <!-- Requisition Info Section -->
-                            <div class="container mb-4 fw-bold fs-5">
-                                <div class="row text-center">
+                            <div class="container mb-3 fw-bold fs-6">
+                                <div class="row g-2 text-center">
 
                                     <div class="col">
-                                        <label class="form-label form-label-sm fw-bold text-dark">PR CODE :</label>
-                                        <input id="PRCODE2" class="form-control form-control-sm text-center text-dark shadow-sm bg-light fw-semibold" type="text" readonly />
+                                        <label class="fw-bold text-dark">PR CODE :</label><br />
+                                        <span id="PRCODE2"></span>
                                     </div>
 
                                     <div class="col">
-                                        <label class="form-label form-label-sm fw-bold text-dark">Required Date :</label>
-                                        <input id="RequiredDate2" class="form-control form-control-sm text-center text-dark shadow-sm bg-light fw-semibold" type="text" readonly />
+                                        <label class="fw-bold text-dark">Required Date :</label><br />
+                                        <span id="RequiredDate2"></span>
                                     </div>
 
                                     <div class="col">
-                                        <label class="form-label form-label-sm fw-bold text-dark">Created By :</label>
-                                        <input id="FullName2" class="form-control form-control-sm text-center text-dark shadow-sm bg-light fw-semibold text-dark" type="text" readonly />
+                                        <label class="fw-bold text-dark">Created By :</label><br />
+                                        <span id="FullName2"></span>
                                     </div>
 
                                     <div class="col">
-                                        <label class="form-label form-label-sm fw-bold text-dark">Status :</label>
-                                        <input id="Status2" class="form-control form-control-sm text-center text-dark shadow-sm bg-light fw-semibold" type="text" readonly />
+                                        <label class="fw-bold text-dark">Status :</label><br />
+                                        <span id="Status2"></span>
                                     </div>
+
 
                                 </div>
                             </div>
@@ -211,28 +212,29 @@
                     <div class="card-body p-3">
 
                         <!-- Requisition Info Section -->
-                        <div class="container mb-4 fw-bold fs-5">
-                            <div class="row text-center">
+                        <div class="container mb-3 fw-bold fs-6">
+                            <div class="row g-2 text-center">
 
                                 <div class="col">
-                                    <label class="form-label form-label-sm fw-bold text-dark">PR CODE :</label>
-                                    <input id="PRCODEUpdate2" class="form-control form-control-sm text-center shadow-sm text-dark bg-light fw-semibold " type="text" readonly />
+                                    <label class="fw-bold text-dark">PR CODE :</label><br />
+                                    <span id="PRCODEUpdate2"></span>
                                 </div>
 
                                 <div class="col">
-                                    <label class="form-label form-label-sm fw-bold text-dark">Required Date :</label>
-                                    <input id="RequiredDateUpdate2" class="form-control form-control-sm text-center shadow-sm text-dark bg-light fw-semibold" type="text" readonly />
+                                    <label class="fw-bold text-dark">Required Date :</label><br />
+                                    <span id="RequiredDateUpdate2"></span>
                                 </div>
 
                                 <div class="col">
-                                    <label class="form-label form-label-sm fw-bold text-dark">Created By :</label>
-                                    <input id="FullNameUpdate2" class="form-control form-control-sm text-center text-dark shadow-sm bg-light fw-semibold text-dark" type="text" readonly />
+                                    <label class="fw-bold text-dark">Created By :</label><br />
+                                    <span id="FullNameUpdate2"></span>
                                 </div>
 
                                 <div class="col">
-                                    <label class="form-label form-label-sm fw-bold text-dark">Status :</label>
-                                    <input id="StatusUpdate2" class="form-control form-control-sm text-center text-dark shadow-sm bg-light fw-semibold" type="text" readonly />
+                                    <label class="fw-bold text-dark">Status :</label><br />
+                                    <span id="StatusUpdate2"></span>
                                 </div>
+
 
                             </div>
                         </div>
@@ -383,49 +385,42 @@
                         return '<span class="badge bg-success">' + data + '</span>';
                     }
                 },
-                {   // Action Buttons
+                {
                     data: null,
                     title: "Action",
-                    className: 'no-export',
+                    className: "no-export text-center",
                     orderable: false,
                     render: function (data, type, row) {
+
+                        let html = `<div class="d-flex gap-1 justify-content-center">`;
+
+                        // Update Button (Only for Pending status)
                         if (row.Status === "Pending") {
-                            // Show both Update and View buttons inline
-                            return `
-<div class="d-flex gap-1">
-    <button class="btn btn-sm btn-secondary update-btn2 square-pill d-inline-flex align-items-center px-2 py-1 shadow-Update" data-bs-toggle="tooltip"
-            data-id="${row.PRCode}"
-            data-bs-toggle="modal"
-            data-bs-target="#updatependingModal"
-            title="Update PR">
-        <i class="bi bi-pencil"></i>
-    </button>
-   <button class="btn btn-sm btn-primary view-btn2 square-pill d-inline-flex align-items-center px-2 py-1 shadow-View"
-            data-id="${row.PRCode}"
-            data-bs-toggle="modal"
-            data-bs-target="#pendingModal"
-            data-bs-title="View PR"
-            title="View PR">
-        <i class="bi bi-eye"></i>
-    </button>
-</div>`;
-                        } else if (row.Status === "Approved" || row.Status === "Rejected") {
-                            // Show only View button
-                            return `
-<button class="btn btn-sm btn-primary view-btn2 square-pill d-inline-flex align-items-center px-2 py-1 shadow-View"
-            data-id="${row.PRCode}"
-            data-bs-toggle="modal"
-            data-bs-target="#pendingModal"
-            data-bs-title="View PR"
-            title="View PR">
-        <i class="bi bi-eye"></i>
-    </button>`;
-                        } else {
-                            return ''; // Optional: no buttons for other statuses
+                            html += `
+<button class="btn btn-sm btn-secondary update-btn2 square-pill d-inline-flex align-items-center px-2 py-1 shadow-Update"
+        data-id="${row.PRCode}"
+        data-bs-toggle="modal"
+        data-bs-target="#updatependingModal"
+        data-bs-title="Update PR"
+        title="Update PR">
+    <i class="bi bi-pencil"></i>
+</button>`;
                         }
+
+                        // View Button (Always second)
+                        html += `
+<button class="btn btn-sm btn-primary view-btn2 square-pill d-inline-flex align-items-center px-2 py-1 shadow-View"
+        data-id="${row.PRCode}"
+        data-bs-title="View PR"
+        data-bs-toggle="modal"
+        data-bs-target="#pendingModal">
+    <i class="bi bi-eye"></i>
+</button>`;
+
+                        html += `</div>`;
+                        return html;
                     }
                 }
-
             ],
             columnDefs: [
                 { className: "text-center", targets: "_all" }
@@ -767,26 +762,47 @@
         });
 
 
-        // Initialize tooltips globally
         function initTooltips() {
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
+            const selector = '[data-bs-title]';  // Tooltip only when data-bs-title exists
+            const elements = document.querySelectorAll(selector);
+
+            elements.forEach(el => {
+                // Remove previous tooltip instance
+                const existing = bootstrap.Tooltip.getInstance(el);
+                if (existing) existing.dispose();
+
+                // Initialize only when data-bs-title present
+                if (el.getAttribute('data-bs-title')?.trim() !== "") {
+                    new bootstrap.Tooltip(el, { container: 'body', trigger: 'hover' });
+                }
             });
         }
 
-        // Initialize on first load
+        // Initialize on load
         initTooltips();
 
-        // Re-initialize after DataTable draw (for dynamic rows)
-        $('#TablePending').on('draw.dt', function () {
-            initTooltips();
+        // Re-init after DataTable draw
+        $('#TablePending').on('draw.dt', initTooltips);
+
+        // Re-init inside modals
+        $('#pendingModal, #updatependingModal').on('shown.bs.modal', initTooltips);
+
+        // ✅ Dispose tooltip when clicking View/Update Button
+        $(document).on("click", ".view-btn2, .update-btn2", function () {
+
+            const tip = bootstrap.Tooltip.getInstance(this);
+            if (tip) {
+                tip.dispose();
+            }
+
+            // In case tooltip was on icon
+            const icon = this.querySelector('i');
+            const iconTip = bootstrap.Tooltip.getInstance(icon);
+            if (iconTip) {
+                iconTip.dispose();
+            }
         });
 
-        // Re-initialize in modals (like Update or View)
-        $('#updatependingModal, #pendingModal').on('shown.bs.modal', function () {
-            initTooltips();
-        });
 
 
         //  Date Range Filter (Applied on column 5)
@@ -889,10 +905,10 @@
                 if (response.success) {
                     var formattedDate = moment(response.data.RequiredDate).format("DD/MM/YYYY");
 
-                    $("#PRCODE2").val(response.data.PRCode);
-                    $("#RequiredDate2").val(formattedDate);
-                    $("#FullName2").val(response.data.FullName);
-                    $("#Status2").val(response.data.Status);
+                    $("#PRCODE2").text(response.data.PRCode);
+                    $("#RequiredDate2").text(formattedDate);
+                    $("#FullName2").text(response.data.FullName);
+                    $("#Status2").text(response.data.Status);
                 }
             },
             error: function (xhr, status, error) {
@@ -944,7 +960,7 @@
                             let shortText = cellData.length > 25 ? cellData.substring(0, 25) + "..." : cellData;
                             $(td)
                                 .text(shortText)
-                                .attr("title", cellData)
+                                .attr("data-bs-title", cellData)
                                 .attr("data-bs-toggle", "tooltip")
                                 .attr("data-bs-placement", "top");
                         }
@@ -1011,10 +1027,10 @@
             `);
 
                         // Fetch PR Details (using text(). Correct!)
-                        let prCode = $("#PRCODE2").val();
-                        let reqDate = $("#RequiredDate2").val();
-                        let fullName = $("#FullName2").val();
-                        let status = $("#Status2").val();
+                        let prCode = $("#PRCODE2").text();
+                        let reqDate = $("#RequiredDate2").text();
+                        let fullName = $("#FullName2").text();
+                        let status = $("#Status2").text();
 
                         // Custom Header HTML
                         let headerHtml = `
@@ -1065,10 +1081,10 @@
             success: function (response) {
                 if (response.success) {
                     var formattedDate = moment(response.data.RequiredDate).format("DD/MM/YYYY");
-                    $("#PRCODEUpdate2").val(response.data.PRCode);
-                    $("#RequiredDateUpdate2").val(formattedDate);
-                    $("#FullNameUpdate2").val(response.data.FullName);
-                    $("#StatusUpdate2").val(response.data.Status);
+                    $("#PRCODEUpdate2").text(response.data.PRCode);
+                    $("#RequiredDateUpdate2").text(formattedDate);
+                    $("#FullNameUpdate2").text(response.data.FullName);
+                    $("#StatusUpdate2").text(response.data.Status);
 
                 }
             }
@@ -1106,7 +1122,7 @@
                             let shortText = cellData.length > 25 ? cellData.substring(0, 25) + "..." : cellData;
                             $(td)
                                 .text(shortText)
-                                .attr("title", cellData)
+                                .attr("data-bs-title", cellData)
                                 .attr("data-bs-toggle", "tooltip")
                                 .attr("data-bs-placement", "top");
                         }

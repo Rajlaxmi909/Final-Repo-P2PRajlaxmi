@@ -892,7 +892,7 @@
         });
 
         // --- When opening vendor container ---
-        $(document).on("click", ".btnViewRFQ, #btnSendRFQ", function () {
+        $(document).on("click", "#btnSendRFQ", function () {
 
             // 🔹 Hide main header & tabs
             $("#pageHeader").hide();
@@ -2010,23 +2010,31 @@
                     }
 
                     if (header.RequiredDate) {
-                        const m = moment(header.RequiredDate, "DD-MM-YYYY HH:mm:ss", true);
+                        // Try parsing with strict format first
+                        let m = moment(header.RequiredDate, "DD-MM-YYYY HH:mm:ss", true);
+
+                        // If that fails, fall back to auto-detection
+                        if (!m.isValid()) {
+                            m = moment(header.RequiredDate);
+                        }
+
+                        // Now, if valid, use it
                         if (m.isValid()) {
                             const formattedRequiredDate = m.format("DD/MM/YYYY");
                             $("#rfqRequiredDate").val(formattedRequiredDate);
 
-                            // Calculate min and max selectable Expected Dates
+                            // Calculate date limits for Expected Date
                             const today = moment();
                             const maxAllowed = m.clone().subtract(2, "days");
 
-                            // Set the date input range: from today to two days before RequiredDate
+                            // Apply min/max limits for date picker
                             $("#ToDate").attr("min", today.format("YYYY-MM-DD"));
                             $("#ToDate").attr("max", maxAllowed.format("YYYY-MM-DD"));
-
                         } else {
-                            console.warn("Invalid date format:", header.RequiredDate);
+                            console.warn("⚠️ Invalid date format in RequiredDate:", header.RequiredDate);
                         }
                     }
+
 
                     // Inside your success callback, after setting ToDate range:
                     $("#ToDate").off("change").on("change", function () {
@@ -2095,13 +2103,51 @@
 
                     $("#rfqDetailsTitle1").text("RFQ Details – " + (header.RFQCode || header.rfqCode || ""));
 
-                    if (actionType === "send") {
+                    /*if (actionType === "send") {
                         $("#btnSendRFQ").show();
                         $("#ExDate").show();
                     } else {
                         $("#btnSendRFQ").hide();
                         $("#ExDate").hide();
+                    }*/
+
+                    if (actionType === "send") {
+                        $("#btnSendRFQ").show();
+                        $("#ExDate").show();
+
+                        // Rebuild inputs from labels if any labels exist (to restore form)
+                        $("#rfqDetailsModal .form-control-plaintext").each(function () {
+                            const val = $(this).text();
+                            const input = $("<input>")
+                                .addClass("form-control form-control-sm text-dark shadow-sm bg-light")
+                                .val(val);
+                            $(this).replaceWith(input);
+                        });
                     }
+
+                    else if (actionType === "view") {
+                        $("#btnSendRFQ").hide();
+                        $("#ExDate").hide();
+
+                        // Loop through inputs and textareas and replace with labels
+                        $("#rfqDetailsModal input, #rfqDetailsModal textarea").each(function () {
+                            const val = $(this).val() || "-";
+
+                            // Only replace editable ones, skip hidden/date fields etc.
+                            if (!$(this).attr("type") || $(this).attr("type") === "text" || $(this).is("textarea")) {
+                                // Create a label element with same styling
+                                const label = $("<label>")
+                                    .addClass("form-control-plaintext text-dark")
+                                    .text(val);
+
+                                // Replace the input/textarea with label
+                                $(this).replaceWith(label);
+                            }
+                        });
+                    }
+
+                    
+
 
                     var modal = new bootstrap.Modal(document.getElementById("rfqDetailsModal"));
                     modal.show();

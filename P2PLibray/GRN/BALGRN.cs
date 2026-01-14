@@ -10,8 +10,56 @@ using P2PHelper;
 namespace P2PLibray.GRN
 {
 
-   
-    public class BALGRN
+    public class GRNBase
+    {
+        protected MSSQL obj = new MSSQL();
+
+        // Simple reusable abstraction for SP with DataReader
+        protected async Task<SqlDataReader> Read(string flag, Dictionary<string, string> extra = null)
+        {
+            var param = new Dictionary<string, string> { { "@Flag", flag } };
+            if (extra != null)
+            {
+                foreach (var kv in extra)
+                    param.Add(kv.Key, kv.Value);
+            }
+            return await obj.ExecuteStoredProcedureReturnDataReader("GRNProcedure", param);
+        }
+
+        // SP with DataSet
+        protected async Task<DataSet> ReadDS(string flag, Dictionary<string, string> extra = null)
+        {
+            var param = new Dictionary<string, string> { { "@Flag", flag } };
+            if (extra != null)
+            {
+                foreach (var kv in extra)
+                    param.Add(kv.Key, kv.Value);
+            }
+            return await obj.ExecuteStoredProcedureReturnDS("GRNProcedure", param);
+        }
+
+        // SP Execute (insert/update/delete)
+        protected async Task Exec(string flag, Dictionary<string, string> extra = null)
+        {
+            var param = new Dictionary<string, string> { { "@Flag", flag } };
+            if (extra != null)
+            {
+                foreach (var kv in extra)
+                    param.Add(kv.Key, kv.Value);
+            }
+            await obj.ExecuteStoredProcedure("GRNProcedure", param);
+        }
+
+        // Polymorphism example (overridable)
+        protected virtual void Log(string msg)
+        {
+            // optional - can be extended
+            Console.WriteLine(msg);
+        }
+    }
+
+
+    public class BALGRN: GRNBase
     {
 
         MSSQL obj = new MSSQL();
@@ -23,12 +71,9 @@ namespace P2PLibray.GRN
         /// <returns>SqlDataReader containing rejected goods data.</returns>
         public async Task<SqlDataReader> GetRejectedGoods()
         {
-            Dictionary<string, string> param = new Dictionary<string, string>
-            {
-                { "@Flag", "GSTtblGoodsReturnHSB" }
-            };
-            return await obj.ExecuteStoredProcedureReturnDataReader("GRNProcedure", param);
+            return await Read("GSTtblGoodsReturnHSB");
         }
+
 
         /// <summary>
         /// Gets the list of returned goods.
@@ -36,12 +81,9 @@ namespace P2PLibray.GRN
         /// <returns>SqlDataReader containing returned goods data.</returns>
         public async Task<SqlDataReader> GetReturnGoods()
         {
-            Dictionary<string, string> param = new Dictionary<string, string>
-            {
-                { "@Flag", "ReturnListHSB" }
-            };
-            return await obj.ExecuteStoredProcedureReturnDataReader("GRNProcedure", param);
+            return await Read("ReturnListHSB");
         }
+
 
         /// <summary>
         /// Gets GRN details along with its items for in-stock goods.

@@ -56,7 +56,6 @@
         overflow: hidden;
     }
 
-    /*  Compact Table Row Size */
     .table td, .table th {
         padding: 0.35rem 0.5rem !important;
         font-size: 0.78rem;
@@ -79,7 +78,18 @@
         }
     }
 
+    .dt-toolbar {
+        margin-bottom: 2px !important; 
+    }
 
+    div.dt-buttons {
+        margin-bottom: 2px !important;
+    }
+
+    .dataTables_filter {
+        margin-bottom: 2px !important;
+    }
+   
 
 
 </style>
@@ -121,7 +131,13 @@
 
 
 <script>
+
+     function viewPO(poCode) {
+         window.open('/Purchase/ViewApprovedPOPDF?poCode=' + poCode, '_blank');
+ }
     $(function () {
+
+       
         let approvedTable;
 
         toastr.options = {
@@ -173,8 +189,17 @@
 
                     //{ data: 'StatusName', className: 'text-center', render: d => `<span class="badge bg-success">${d || 'Unknown'}</span>` },
 
-                    { data: 'POCode', orderable: false, className: 'text-center', render: d => `<button class="btn btn-sm btn-square btn-view square-pill d-inline-flex align-items-center px-2 py-1 shadow btn-primary" data-pocode="${d}" title="View"><i class="bi bi-eye-fill "></i></button>` }
+                //    { data: 'POCode', orderable: false, className: 'text-center', render: d => `<button class="btn btn-sm btn-square btn-view square-pill d-inline-flex align-items-center px-2 py-1 shadow btn-primary" data-pocode="${d}" title="View"><i class="bi bi-eye-fill "></i></button>` }
+
+                    {
+                        data: 'POCode',
+                        orderable: false,
+                        className: 'text-center',
+                        render: (d, type, row) => `<button class="btn btn-primary fs-5 square-pill d-inline-flex align-items-center px-2 py-1 shadow  btn-icon-square" onclick="viewPO('${row.POCode}')"> <i class="bi bi-eye-fill fs-5"></i></button>`
+                    }
+
                 ],
+
 
 
                 buttons: [
@@ -316,6 +341,9 @@
                                     $(this).attr('r', col + rowNum);
                                 });
                             });
+
+
+
 
                             // 🔹 Create Title & Date Rows
                             const titleRow = `

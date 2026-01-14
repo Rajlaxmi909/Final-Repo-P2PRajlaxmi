@@ -143,10 +143,18 @@
 
                 <!-- Charts section -->
                 <div class="row g-4 mb-4">
-                    <div class="col-12">
+                    <div class="col-12 col-lg-6">
                         <div class="card shadow-sm">
                             <div class="card-body">
                                 <div id="barChart" style="height: 400px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-lg-6">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div id="barChart2" style="height: 400px;"></div>
                             </div>
                         </div>
                     </div>
@@ -268,6 +276,8 @@
                 $("#pendingRcCard h3").text(data.PendingRC);
                 $("#approvedPoCard h3").text(data.ApprovedPO);
                 $("#pendingPoCard h3").text(data.PendingPO);
+               
+
 
 
                         Highcharts.chart('barChart', {
@@ -319,6 +329,94 @@
                             tooltip: { shared: true },
                             credits: { enabled: false }
                         });
+
+                /////////////////////////////////////////////////////////////////
+
+                Highcharts.chart('barChart2', {
+                    chart: { type: 'column' },
+
+                    title: {
+                        useHTML: true,
+                        text: `
+            <span style="color:#28a745; font-size:14px; font-weight:600; font-family:Segoe UI, Roboto, sans-serif;">
+                <i class="bi bi-bar-chart-fill me-1"></i>
+                Total PR,PO vs Rejected (${displayStartDate} to ${displayEndDate})
+            </span>
+        `
+                    },
+
+                    xAxis: { categories: ['PR', 'PO'] },
+                    yAxis: { min: 0, title: { text: 'Count' } },
+
+                    plotOptions: {
+                        series: {
+                            cursor: 'pointer',
+                            point: {
+                                events: {
+                                    click: function () {
+
+                                        const cat = this.category;              // PR / PO
+                                        const seriesName = this.series.name;    // Total / Rejected
+
+                                        console.log("CLICK => ", cat, seriesName);
+
+                                        if (cat === "PR" && seriesName === "Total") {
+                                            loadPartial("All Purchase Requisition", "/Purchase/ShowAllPRPartialPRK");
+                                        }
+                                        else if (cat === "PO" && seriesName === "Total") {
+                                            loadPartial("All Purchase Orders", "/Purchase/ShowAllPOPartialPRK");
+                                        }
+                                        else if (cat === "PR" && seriesName === "Rejected") {
+                                            loadPartial("Rejected Purchase Requisition", "/Purchase/ShowRejectedPRPartialPRK");
+                                        }
+                                        else if (cat === "PO" && seriesName === "Rejected") {
+                                            loadPartial("Rejected Purchase Orders", "/Purchase/ShowRejectedOPartialPRK");
+                                        }
+                                    }
+                                }
+                            }
+
+                        },
+
+                        column: {
+                            borderRadius: 5,
+                            dataLabels: {
+                                enabled: true,
+                                style: { fontWeight: 'bold', color: '#000', textOutline: 'none' }
+                            }
+                        }
+                    },
+
+                    series: [
+                        {
+                            name: 'Total',
+                            data: [data.AllPR, data.AllPO],
+                            color: {
+                                linearGradient: { x1: 0, y1: 0 },
+                                stops: [
+                                    [0, '#16a34a'],
+                                    [1, '#0d6d2d']
+                                ]
+                            }
+                        },
+                        {
+                            name: 'Rejected',
+                            data: [data.Rejected, data.RejectedPO],
+                            color: {
+                                linearGradient: { x1: 0, y1: 0 },
+                                stops: [
+                                    [0, '#ef4444'],
+                                    [1, '#b91c1c']
+                                ]
+                            }
+                        }
+                    ],
+
+                    tooltip: { shared: true },
+                    credits: { enabled: false }
+                });
+
+
 
                     });
                 
@@ -396,7 +494,8 @@
 
             // Modal loader (unchanged)
             const modal = new bootstrap.Modal(document.getElementById("dashboardModal"));
-            function loadPartial(title, url) {
+
+            window.loadPartial = function (title, url) {
                 const $modal = $("#dashboardModal");
                 const $modalBody = $("#dashboardModalBody");
 

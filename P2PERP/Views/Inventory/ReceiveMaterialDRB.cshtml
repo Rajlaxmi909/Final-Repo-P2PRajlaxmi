@@ -17,14 +17,15 @@
 <div class="container pt-2">
     <div class="card p-4">
 
-        <!-- Date Filters -->
-        <div class="mb-3 d-flex gap-2">
-            <div class="input-group" style="max-width: 230px;">
+        <div class="d-flex gap-50">
+            <!-- Date Filters -->
+            <div class="input-group input-group-sm mb-5" style="max-width: 230px;">
                 <span class="input-group-text bg-primary text-white">
                     <i class="bi bi-calendar-date"></i>
                 </span>
-                <input type="text" id="Rejectedrange" class="form-control form-control-sm shadow-sm" placeholder="Select date range" readonly />
+                <input type="text" id="Rejectedrange" class="form-control shadow-sm" placeholder="Select date range" readonly />
             </div>
+
             <h3 class="text-center text-primary" style="margin-left:140px;">Receive Material</h3>
 
         </div>
@@ -134,7 +135,7 @@
                 // ==== Print ====
                 {
                     extend: 'print',
-                    text: '<i class="bi bi-printer-fill fs-5"></i>',
+                    text: '<i class="bi bi-printer-fill text-dark fs-5"></i>',
                     title: 'GRN Details',
                     exportOptions: {
                         rows: function (idx, data, node) {
@@ -489,6 +490,7 @@
                     orderable: false,
                 },
                 { data: "GRNCode", title: "GRN Code" },
+                { data: "SupplierName", title: "Supplier Name" },
                 {
                     data: "AddedDate",
                     title: "GRN Date",

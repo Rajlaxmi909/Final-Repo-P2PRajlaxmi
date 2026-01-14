@@ -90,6 +90,12 @@
                         <i class="bi bi-check-circle me-1"></i> Approved PR
                     </button>
                 </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#rejectpr" type="button" role="tab">
+                        <i class="bi bi-check-circle me-1"></i> Rejected PR
+                    </button>
+                </li>
             </ul>
         </div>
 
@@ -110,6 +116,10 @@
 
                 <div class="tab-pane fade" id="approvedpr" role="tabpanel">
                     @Html.Partial("_ApprovedPRSP")
+                </div>
+
+                <div class="tab-pane fade" id="rejectpr" role="tabpanel">
+                    @Html.Partial("_Rejectpr")
                 </div>
             </div>
         </div>

@@ -8,17 +8,16 @@
 </div>
 
 <style>
-    button.dt-button.processing,
+    .button.dt-button.processing,
     div.dt-button.processing {
         pointer-events: auto !important;
         opacity: 1 !important;
         background: none !important;
     }
 
-        button.dt-button.processing:after {
-            content: none !important;
-        }
-
+    button.dt-button.processing:after {
+        content: none !important;
+    }
 
     /* Fix double border for input-group-merge */
     .input-group-merge .form-control,
@@ -58,6 +57,23 @@
     .text-red {
         color: red;
     }
+
+    /* Style for view modal labels */
+    .form-control-plaintext.bg-light {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        word-break: break-word;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+        .form-control-plaintext.bg-light:empty::before {
+            content: "-";
+            color: #6c757d;
+            font-style: italic;
+        }
 </style>
 
 <div class="table-responsive">
@@ -172,7 +188,7 @@
 </div>
 
 <!-- View Warehouse Modal -->
-
+<!-- View Warehouse Modal -->
 <div class="modal fade" id="viewWarehouseModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content shadow-lg rounded-3">
@@ -188,71 +204,57 @@
 
             <!-- Body -->
             <div class="modal-body">
-                <form class="row g-3">
-
+                <div class="row g-3">
                     <div class="col-md-6">
-                        <label for="vwCode" class="form-label fw-bold text-dark">Warehouse Code</label>
-                        <input type="text" class="form-control form-control-sm text-dark shadow-sm bg-light"
-                               id="vwCode" readonly>
+                        <label class="form-label fw-bold text-dark">Warehouse Code</label>
+                        <div class="text-dark" id="vwCode">-</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="vwName" class="form-label fw-bold text-dark">Warehouse Name</label>
-                        <input type="text" class="form-control form-control-sm text-dark shadow-sm bg-light"
-                               id="vwName" readonly>
+                        <label class="form-label fw-bold text-dark">Warehouse Name</label>
+                        <div class="text-dark" id="vwName">-</div>
                     </div>
 
                     <div class="col-12">
-                        <label for="vwAddress" class="form-label fw-bold text-dark">Address</label>
-                        <textarea class="form-control form-control-sm text-dark shadow-sm bg-light"
-                                  id="vwAddress" rows="2" readonly></textarea>
+                        <label class="form-label fw-bold text-dark">Address</label>
+                        <div class="text-dark" id="vwAddress">-</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="vwCity" class="form-label fw-bold text-dark">City</label>
-                        <input type="text" class="form-control form-control-sm text-dark shadow-sm bg-light"
-                               id="vwCity" readonly>
+                        <label class="form-label fw-bold text-dark">City</label>
+                        <div class="text-dark" id="vwCity">-</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="vwPhone" class="form-label fw-bold text-dark">Phone</label>
-                        <input type="text" class="form-control form-control-sm text-dark shadow-sm bg-light"
-                               id="vwPhone" readonly>
+                        <label class="form-label fw-bold text-dark">Phone</label>
+                        <div class="text-dark" id="vwPhone">-</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="vwEmail" class="form-label fw-bold text-dark">Email</label>
-                        <input type="text" class="form-control form-control-sm text-dark shadow-sm bg-light"
-                               id="vwEmail" readonly>
+                        <label class="form-label fw-bold text-dark">Email</label>
+                        <div class="text-dark" id="vwEmail">-</div>
                     </div>
 
                     <div class="col-12">
-                        <label for="vwDesc" class="form-label fw-bold text-dark">Description</label>
-                        <textarea class="form-control form-control-sm text-dark shadow-sm bg-light"
-                                  id="vwDesc" rows="2" readonly></textarea>
+                        <label class="form-label fw-bold text-dark">Description</label>
+                        <div class="text-dark" id="vwDesc">-</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="vwAddedDates" class="form-label fw-bold text-dark">Added Date</label>
-                        <input type="text" class="form-control form-control-sm text-dark shadow-sm bg-light"
-                               id="vwAddedDates" readonly>
+                        <label class="form-label fw-bold text-dark">Added Date</label>
+                        <div class="text-dark" id="vwAddedDates">-</div>
                     </div>
 
                     <div class="col-md-6">
-                        <label for="vwAddedBy" class="form-label fw-bold text-dark">Added By</label>
-                        <input type="text" class="form-control form-control-sm text-dark shadow-sm bg-light"
-                               id="vwAddedBy" readonly>
+                        <label class="form-label fw-bold text-dark">Added By</label>
+                        <div class="text-dark" id="vwAddedBy">-</div>
                     </div>
-
-                </form>
+                </div>
             </div>
 
         </div>
     </div>
 </div>
-
-
-
 <script>
     $(document).ready(function () {
         // ================= CONFIGURATION & CONSTANTS =================
@@ -390,9 +392,7 @@
                         errorId: 'WarehouseEmailError',
                         value: $form.find("#Email").val().trim(),
                         required: true,
-
                         message: 'Email is required.'
-
                     },
                     {
                         id: 'Description',
@@ -805,7 +805,8 @@
                 });
             });
         }
-        //========= Date Range Picker====
+
+        // ================= DATE RANGE PICKER =================
         function addDateRangePicker() {
             $('#warehouseTable_wrapper').prepend(`
         <div class="input-group mb-2 mt-3" style="max-width: 280px;">
@@ -1092,25 +1093,24 @@
         }
 
         function populateViewModal(data) {
-            $("#vwCode").val(data.WarehouseCode);
-            $("#vwName").val(data.WarehouseName);
-            $("#vwAddress").val(data.Address);
-            $("#vwPhone").val(data.Phone);
-            $("#vwEmail").val(data.Email);
-            $("#vwDesc").val(data.Description);
-            $("#vwAddedDates").val(utils.formatSqlDate(data.AddedDate));
-            $("#vwAddedBy").val(data.AddedBy);
+            $("#vwCode").text(data.WarehouseCode || "-");
+            $("#vwName").text(data.WarehouseName || "-");
+            $("#vwAddress").text(data.Address || "-");
+            $("#vwPhone").text(data.Phone || "-");
+            $("#vwEmail").text(data.Email || "-");
+            $("#vwDesc").text(data.Description || "-");
+            $("#vwAddedDates").text(utils.formatSqlDate(data.AddedDate) || "-");
+            $("#vwAddedBy").text(data.AddedBy || "-");
 
             // Load city name
             if (data.CountryCode && data.StateCode && data.CityId) {
                 $.get(CONFIG.urls.getCities, { countryCode: data.CountryCode, stateCode: data.StateCode, CityId: data.CityId }, function (cityRes) {
-                    $("#vwCity").val(cityRes && cityRes.Name ? cityRes.Name : "N/A");
+                    $("#vwCity").text(cityRes && cityRes.Name ? cityRes.Name : "N/A");
                 });
             } else {
-                $("#vwCity").val("N/A");
+                $("#vwCity").text("N/A");
             }
         }
-
         function editWarehouse(id) {
             $.get(CONFIG.urls.viewWarehouse, { id }, function (res) {
                 if (res.success) {
@@ -1225,9 +1225,20 @@
         function initialize() {
             initializeDataTable();
             setupEventHandlers();
-            setTimeout(utils.initTooltips, 500);
-        }
 
+            // Tooltip initialization and refresh
+            setTimeout(utils.initTooltips, 500);
+
+            // Refresh tooltips whenever modal closes
+            $(document).on('hidden.bs.modal', function () {
+                setTimeout(utils.initTooltips, 300);
+            });
+
+            // Refresh tooltips on table updates
+            $(document).on('draw.dt', function () {
+                setTimeout(utils.initTooltips, 200);
+            });
+        }
         // Start the application
         initialize();
     });

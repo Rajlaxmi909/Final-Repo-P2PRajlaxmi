@@ -129,10 +129,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="col-sm-6">
                             <strong>${props.StatusName == 'Rejected' ? 'Rejected Date' : 'Approved Date'}:</strong> ${safe(props.ApprovedDate)}
                         </div>
-                        <div class="col-sm-12 mb-3">
-                            <strong>Description:</strong> ${safe(props.Description)}
-                        </div>`
-                    : ''}
+                        ${(props.StatusName === 'Rejected') ?
+                            `<div class="col-sm-12 mb-3">
+                                <strong>Description:</strong> ${safe(props.Description)}
+                            </div>`: ''}
+                    `: ''}
                 </div>
             </div>
             <hr/>
@@ -401,9 +402,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="col-sm-6">
                         <strong>Status:</strong> ${safe(props.StatusName)}
                     </div>
-                    <div class="col-sm-12">
+                    <div class="col-sm-6">
                         <strong>Billing Address:</strong> ${safe(props.BillingAddress)}
                     </div>
+                    ${(props.StatusName === 'Rejected') ? 
+                        `<div class="col-sm-6">
+                            <strong>Note:</strong> ${safe(props.Description)}
+                        </div>` : ''
+                    }
                     <div class="col-sm-12 mb-3">
                         <strong>Term Conditions:</strong> ${termList}
                     </div>
@@ -777,7 +783,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const modalTitle = document.querySelector('#eventModal .modal-title');
         const modalBody = document.querySelector('#eventModal .modal-body');
         modalTitle.textContent = title;
-        console.log(props);
         modalBody.innerHTML = `
         <table id="isrJitTable" class="table table-striped table-bordered w-100">
             <thead class="table-dark">

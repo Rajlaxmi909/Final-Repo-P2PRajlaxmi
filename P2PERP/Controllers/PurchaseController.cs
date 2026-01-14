@@ -1,5 +1,6 @@
 ﻿using iTextSharp.text;
 using iTextSharp.text.pdf;
+using iTextSharp.text.pdf.draw;
 using Microsoft.Ajax.Utilities;
 using Newtonsoft.Json;
 using P2PLibray.Account;
@@ -22,6 +23,7 @@ using System.Web;
 using System.Web.Configuration;
 using System.Web.Mvc;
 using System.Web.Services.Description;
+using System.Web.UI.WebControls;
 using System.Xml.Linq;
 using static P2PLibray.Purchase.Purchase;
 using iTextColor = iTextSharp.text.BaseColor;
@@ -425,13 +427,47 @@ namespace P2PERP.Controllers
         }
 
         //  Register Quotation 
-        [HttpGet]
-        public ActionResult RegisterQuotationVNK(string rfqCode, string prCode)
+        //[HttpGet]
+        //public ActionResult RegisterQuotationVNK(string rfqCode, string prCode)
+        //{
+        //    ViewBag.RFQCode = rfqCode;
+        //    ViewBag.PRCode = prCode;
+        //    ViewBag.RequiredDate = "";
+
+        //    return View();
+        //}
+
+       [HttpGet]
+public async Task<ActionResult> RegisterQuotationVNK(string rfqCode, string prCode)
+{
+    ViewBag.RFQCode = rfqCode;
+    ViewBag.PRCode = prCode;
+    ViewBag.RequiredDate = "";
+
+    // ✅ Await the BAL call
+    var result = await bal.GetRFQHeaderVNK(rfqCode);
+
+    // ✅ Cast to DataTable since BAL returns ds.Tables[0]
+    var dt = result as DataTable;
+
+    if (dt != null && dt.Rows.Count > 0)
+    {
+        var row = dt.Rows[0];
+
+        if (row["RequiredDate"] != DBNull.Value)
         {
-            ViewBag.RFQCode = rfqCode;
-            ViewBag.PRCode = prCode;
-            return View();
+            DateTime reqDate;
+            if (DateTime.TryParse(row["RequiredDate"].ToString(), out reqDate))
+            {
+                ViewBag.RequiredDate = reqDate.ToString("yyyy-MM-dd");
+            }
         }
+    }
+
+    return View();
+}
+
+
 
         //  Get RFQ header by RFQ code
         [HttpGet]
@@ -577,9 +613,452 @@ namespace P2PERP.Controllers
             return PartialView("_ApprovedPOsPartialVNK"); // returns the partial view
         }
 
+      
+
+        [HttpGet]
+        public async Task<FileResult> ViewApprovedPOPDF(string poCode)
+        {
+            // 1️⃣ Fetch PO Header from your BAL
+            POHeader poHeader = await bal.GetPOHeaderByCodeVNK(poCode);
+
+            // 2️⃣ Fetch PO Items from your BAL
+            List<POItem> poItems = await bal.GetPOItemsByCodeVNK(poCode);
+
+            if (poHeader == null || poItems == null || poItems.Count == 0)
+                throw new Exception("No data found for this PO.");
+
+            // 3️⃣ Generate PDF using your own method
+            byte[] fileBytes = GenerateApprovedPOPDF(poHeader, poItems);
+
+            // 4️⃣ Return PDF inline in browser
+            Response.AppendHeader("Content-Disposition", "inline; filename=PurchaseOrder.pdf");
+            return File(fileBytes, "application/pdf");
+        }
 
 
-        //nur
+        //public byte[] GenerateApprovedPOPDF(POHeader po, List<POItem> items)
+        //{
+        //    using (MemoryStream ms = new MemoryStream())
+        //    {
+        //        Document doc = new Document(PageSize.A4, 36f, 36f, 20f, 36f);
+        //        PdfWriter.GetInstance(doc, ms);
+        //        doc.Open();
+
+        //        // === COLORS ===
+        //        BaseColor softBlue = new BaseColor(232, 240, 254);
+        //        BaseColor headerBlue = new BaseColor(44, 88, 180);
+        //        BaseColor sectionBlue = new BaseColor(35, 76, 150);
+        //        BaseColor borderGray = new BaseColor(210, 210, 210);
+        //        BaseColor tableHeader = new BaseColor(52, 73, 94);
+
+        //        // === FONTS ===
+        //        iTextSharp.text.Font titleFont = FontFactory.GetFont("Segoe UI", 15, iTextSharp.text.Font.BOLD, headerBlue);
+        //        iTextSharp.text.Font labelFont = FontFactory.GetFont("Segoe UI", 9, iTextSharp.text.Font.BOLD, BaseColor.BLACK);
+        //        iTextSharp.text.Font textFont = FontFactory.GetFont("Segoe UI", 9, BaseColor.BLACK);
+        //        iTextSharp.text.Font sectionFont = FontFactory.GetFont("Segoe UI", 10, iTextSharp.text.Font.BOLD, sectionBlue);
+        //        iTextSharp.text.Font tableHeaderFont = FontFactory.GetFont("Segoe UI", 9, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
+
+        //        // === TITLE ===
+        //        Paragraph title = new Paragraph("PURCHASE ORDER", titleFont)
+        //        {
+        //            Alignment = Element.ALIGN_CENTER,
+        //            SpacingBefore = 0f,
+        //            SpacingAfter = 2f
+        //        };
+        //        doc.Add(title);
+
+        //        Paragraph poNum = new Paragraph("PO Code: " + po?.POCode, FontFactory.GetFont("Segoe UI", 10, iTextSharp.text.Font.BOLD, headerBlue))
+        //        {
+        //            Alignment = Element.ALIGN_CENTER,
+        //            SpacingAfter = 10f
+        //        };
+        //        doc.Add(poNum);
+
+        //        // === SECTION 1: ORDER DETAILS ===
+        //        Paragraph poHeader = new Paragraph("ORDER DETAILS", sectionFont)
+        //        {
+        //            SpacingAfter = 5f
+        //        };
+        //        doc.Add(poHeader);
+
+        //        PdfPTable orderTbl = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 10f };
+        //        orderTbl.SetWidths(new float[] { 1.2f, 2f, 1.2f, 2f });
+
+        //        void AddOrderCell(string label, string value)
+        //        {
+        //            orderTbl.AddCell(new PdfPCell(new Phrase(label, labelFont))
+        //            {
+        //                BackgroundColor = softBlue,
+        //                Padding = 4,
+        //                BorderColor = borderGray
+        //            });
+        //            orderTbl.AddCell(new PdfPCell(new Phrase(value ?? "", textFont))
+        //            {
+        //                Padding = 4,
+        //                BorderColor = borderGray
+        //            });
+        //        }
+
+        //        AddOrderCell("PO Date", po?.AddedDateVK != null ? Convert.ToDateTime(po.AddedDateVK).ToString("dd-MM-yyyy") : "");
+        //        AddOrderCell("Approved/Rejected Date", po?.ApprovedRejectedDateVK != null ? Convert.ToDateTime(po.ApprovedRejectedDateVK).ToString("dd-MM-yyyy") : "");
+        //        AddOrderCell("Company", po?.InvoiceToCompanyName ?? "");
+        //        AddOrderCell("Delivery Address", po?.DeliveryAddress ?? "");
+        //        AddOrderCell("Terms & Conditions", po?.TermConditionName ?? "");
+        //        AddOrderCell("", "");
+        //        doc.Add(orderTbl);
+
+        //        // === SECTION 2: VENDOR DETAILS ===
+        //        Paragraph vendorHeader = new Paragraph("VENDOR DETAILS", sectionFont)
+        //        {
+        //            SpacingAfter = 5f
+        //        };
+        //        doc.Add(vendorHeader);
+
+        //        PdfPTable vendorTbl = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 10f };
+        //        vendorTbl.SetWidths(new float[] { 1.2f, 2f, 1.2f, 2f });
+
+        //        void AddVendorCell(string label, string value)
+        //        {
+        //            vendorTbl.AddCell(new PdfPCell(new Phrase(label, labelFont))
+        //            {
+        //                BackgroundColor = softBlue,
+        //                Padding = 4,
+        //                BorderColor = borderGray
+        //            });
+        //            vendorTbl.AddCell(new PdfPCell(new Phrase(value ?? "", textFont))
+        //            {
+        //                Padding = 4,
+        //                BorderColor = borderGray
+        //            });
+        //        }
+
+        //        AddVendorCell("Vendor Name", po?.VendorName ?? "");
+        //        AddVendorCell("Company", po?.VendorCompanyName ?? "");
+        //        AddVendorCell("Contact", po?.VendorContact ?? "");
+        //        AddVendorCell("Address", po?.VendorAddress ?? "");
+        //        doc.Add(vendorTbl);
+
+        //        // === SECTION 3: ORDER ITEMS ===
+        //        Paragraph itemsHeader = new Paragraph("ORDER ITEM DETAILS", sectionFont)
+        //        {
+        //            SpacingAfter = 3f
+        //        };
+        //        doc.Add(itemsHeader);
+
+        //        PdfPTable itemTbl = new PdfPTable(8) { WidthPercentage = 100, SpacingAfter = 10f };
+        //        itemTbl.SetWidths(new float[] { 0.7f, 1.5f, 2f, 1f, 1f, 1f, 1f, 1.2f });
+
+        //        string[] headers = { "Sr.No", "Item Code", "Item Name", "Qty", "Unit Price", "Discount", "GST %", "Amount" };
+        //        foreach (string h in headers)
+        //        {
+        //            itemTbl.AddCell(new PdfPCell(new Phrase(h, tableHeaderFont))
+        //            {
+        //                BackgroundColor = tableHeader,
+        //                HorizontalAlignment = Element.ALIGN_CENTER,
+        //                Padding = 4,
+        //                BorderColor = borderGray
+        //            });
+        //        }
+
+        //        decimal subTotal = 0, totalShipping = 0, grandTotal = 0;
+        //        int srNo = 1;
+
+        //        foreach (var item in items)
+        //        {
+        //            decimal baseAmount = item.Quantity * item.CostPerUnit;
+        //            decimal discountAmt = baseAmount * (item.Discount / 100m);
+        //            decimal netAmount = baseAmount - discountAmt;
+        //            decimal gstAmount = netAmount * (item.GSTPct / 100m);
+        //            decimal totalAmount = netAmount + gstAmount;
+
+        //            subTotal += totalAmount;
+        //            totalShipping = item.ShippingCharges;
+        //            grandTotal = subTotal + totalShipping;
+
+        //            BaseColor bg = (srNo % 2 == 0) ? new BaseColor(248, 248, 248) : BaseColor.WHITE;
+
+        //            void AddCell(string val, int align = Element.ALIGN_LEFT)
+        //            {
+        //                itemTbl.AddCell(new PdfPCell(new Phrase(val, textFont))
+        //                {
+        //                    BackgroundColor = bg,
+        //                    Padding = 4,
+        //                    BorderColor = borderGray,
+        //                    HorizontalAlignment = align
+        //                });
+        //            }
+
+        //            AddCell(srNo.ToString(), Element.ALIGN_CENTER);
+        //            AddCell(item.ItemCode ?? "");
+        //            AddCell(item.ItemName ?? "");
+        //            AddCell(item.Quantity.ToString("N2"), Element.ALIGN_CENTER);
+        //            AddCell("₹ " + item.CostPerUnit.ToString("N2"), Element.ALIGN_RIGHT);
+        //            AddCell(item.Discount.ToString("N2") + " %", Element.ALIGN_RIGHT);
+        //            AddCell(item.GSTPct.ToString("N2") + " %", Element.ALIGN_CENTER);
+        //            AddCell("₹ " + totalAmount.ToString("N2"), Element.ALIGN_RIGHT);
+
+        //            srNo++;
+        //        }
+
+        //        doc.Add(itemTbl);
+
+        //        // === SECTION 4: TOTALS ===
+        //        PdfPTable totalTbl = new PdfPTable(2) { WidthPercentage = 40, HorizontalAlignment = Element.ALIGN_RIGHT };
+        //        totalTbl.SetWidths(new float[] { 1f, 1f });
+
+        //        void AddTotalRow(string label, decimal value, bool highlight = false)
+        //        {
+        //            totalTbl.AddCell(new PdfPCell(new Phrase(label, highlight ? labelFont : textFont))
+        //            {
+        //                BackgroundColor = highlight ? softBlue : BaseColor.WHITE,
+        //                Padding = 5,
+        //                BorderColor = borderGray
+        //            });
+        //            totalTbl.AddCell(new PdfPCell(new Phrase("₹ " + value.ToString("N2"), highlight ? labelFont : textFont))
+        //            {
+        //                BackgroundColor = highlight ? softBlue : BaseColor.WHITE,
+        //                Padding = 5,
+        //                BorderColor = borderGray,
+        //                HorizontalAlignment = Element.ALIGN_RIGHT
+        //            });
+        //        }
+
+        //        AddTotalRow("Subtotal", subTotal);
+        //        AddTotalRow("Shipping Charges", totalShipping);
+        //        AddTotalRow("Grand Total", grandTotal, highlight: true);
+        //        doc.Add(totalTbl);
+
+
+
+        //        doc.Close();
+        //        return ms.ToArray();
+        //    }
+        //}
+
+
+        public byte[] GenerateApprovedPOPDF(POHeader po, List<POItem> items)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                Document doc = new Document(PageSize.A4, 36f, 36f, 20f, 36f);
+                PdfWriter.GetInstance(doc, ms);
+                doc.Open();
+
+                // === COLORS ===
+                BaseColor softBlue = new BaseColor(232, 240, 254);
+                BaseColor headerBlue = new BaseColor(44, 88, 180);
+                BaseColor sectionBlue = new BaseColor(35, 76, 150);
+                BaseColor borderGray = new BaseColor(210, 210, 210);
+                BaseColor tableHeader = new BaseColor(52, 73, 94);
+
+                // === FONTS ===
+                iTextSharp.text.Font titleFont = FontFactory.GetFont("Segoe UI", 15, iTextSharp.text.Font.BOLD, headerBlue);
+                iTextSharp.text.Font labelFont = FontFactory.GetFont("Segoe UI", 9, iTextSharp.text.Font.BOLD, BaseColor.BLACK);
+                iTextSharp.text.Font textFont = FontFactory.GetFont("Segoe UI", 9, BaseColor.BLACK);
+                iTextSharp.text.Font sectionFont = FontFactory.GetFont("Segoe UI", 10, iTextSharp.text.Font.BOLD, sectionBlue);
+                iTextSharp.text.Font tableHeaderFont = FontFactory.GetFont("Segoe UI", 9, iTextSharp.text.Font.BOLD, BaseColor.WHITE);
+
+                // === TITLE ===
+                Paragraph title = new Paragraph("PURCHASE ORDER", titleFont)
+                {
+                    Alignment = Element.ALIGN_CENTER,
+                    SpacingBefore = 0f,
+                    SpacingAfter = 2f
+                };
+                doc.Add(title);
+
+                Paragraph poNum = new Paragraph("PO Code: " + po?.POCode, FontFactory.GetFont("Segoe UI", 10, iTextSharp.text.Font.BOLD, headerBlue))
+                {
+                    Alignment = Element.ALIGN_CENTER,
+                    SpacingAfter = 10f
+                };
+                doc.Add(poNum);
+
+                // === SECTION 1: ORDER DETAILS ===
+                Paragraph poHeader = new Paragraph("Invoice To", sectionFont)
+                {
+                    SpacingAfter = 5f
+                };
+                doc.Add(poHeader);
+
+                PdfPTable orderTbl = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 10f };
+                orderTbl.SetWidths(new float[] { 1.2f, 2f, 1.2f, 2f });
+
+                void AddOrderCell(string label, string value)
+                {
+                    orderTbl.AddCell(new PdfPCell(new Phrase(label, labelFont))
+                    {
+                        BackgroundColor = softBlue,
+                        Padding = 4,
+                        BorderColor = borderGray
+                    });
+                    orderTbl.AddCell(new PdfPCell(new Phrase(value ?? "", textFont))
+                    {
+                        Padding = 4,
+                        BorderColor = borderGray
+                    });
+                }
+
+                AddOrderCell("PO Date", po?.AddedDateVK != null ? Convert.ToDateTime(po.AddedDateVK).ToString("dd-MM-yyyy") : "");
+                AddOrderCell("Approved/Rejected Date", po?.ApprovedRejectedDateVK != null ? Convert.ToDateTime(po.ApprovedRejectedDateVK).ToString("dd-MM-yyyy") : "");
+                AddOrderCell("Company", po?.InvoiceToCompanyName ?? "");
+                AddOrderCell("Delivery Address", po?.DeliveryAddress ?? "");
+                //AddOrderCell("Terms & Conditions", po?.TermConditionName ?? "");
+                AddOrderCell("", "");
+                doc.Add(orderTbl);
+
+                // === SECTION 2: VENDOR DETAILS ===
+                Paragraph vendorHeader = new Paragraph("VENDOR DETAILS", sectionFont)
+                {
+                    SpacingAfter = 5f
+                };
+                doc.Add(vendorHeader);
+
+                PdfPTable vendorTbl = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 10f };
+                vendorTbl.SetWidths(new float[] { 1.2f, 2f, 1.2f, 2f });
+
+                void AddVendorCell(string label, string value)
+                {
+                    vendorTbl.AddCell(new PdfPCell(new Phrase(label, labelFont))
+                    {
+                        BackgroundColor = softBlue,
+                        Padding = 4,
+                        BorderColor = borderGray
+                    });
+                    vendorTbl.AddCell(new PdfPCell(new Phrase(value ?? "", textFont))
+                    {
+                        Padding = 4,
+                        BorderColor = borderGray
+                    });
+                }
+
+                AddVendorCell("Vendor Name", po?.VendorName ?? "");
+                AddVendorCell("Company", po?.VendorCompanyName ?? "");
+                AddVendorCell("Contact", po?.VendorContact ?? "");
+                AddVendorCell("Address", po?.VendorAddress ?? "");
+                doc.Add(vendorTbl);
+
+                // === SECTION 3: ORDER ITEMS ===
+                Paragraph itemsHeader = new Paragraph("ORDER ITEM DETAILS", sectionFont)
+                {
+                    SpacingAfter = 3f
+                };
+                doc.Add(itemsHeader);
+
+                PdfPTable itemTbl = new PdfPTable(8) { WidthPercentage = 100, SpacingAfter = 10f };
+                itemTbl.SetWidths(new float[] { 0.7f, 1.5f, 2f, 1f, 1f, 1f, 1f, 1.2f });
+
+                string[] headers = { "Sr.No", "Item Code", "Item Name", "Qty", "Unit Price", "Discount", "GST %", "Amount" };
+                foreach (string h in headers)
+                {
+                    itemTbl.AddCell(new PdfPCell(new Phrase(h, tableHeaderFont))
+                    {
+                        BackgroundColor = tableHeader,
+                        HorizontalAlignment = Element.ALIGN_CENTER,
+                        Padding = 4,
+                        BorderColor = borderGray
+                    });
+                }
+
+                decimal subTotal = 0, totalShipping = 0, grandTotal = 0;
+                int srNo = 1;
+
+                foreach (var item in items)
+                {
+                    decimal baseAmount = item.Quantity * item.CostPerUnit;
+                    decimal discountAmt = baseAmount * (item.Discount / 100m);
+                    decimal netAmount = baseAmount - discountAmt;
+                    decimal gstAmount = netAmount * (item.GSTPct / 100m);
+                    decimal totalAmount = netAmount + gstAmount;
+
+                    subTotal += totalAmount;
+                    totalShipping = item.ShippingCharges;
+                    grandTotal = subTotal + totalShipping;
+
+                    BaseColor bg = (srNo % 2 == 0) ? new BaseColor(248, 248, 248) : BaseColor.WHITE;
+
+                    void AddCell(string val, int align = Element.ALIGN_LEFT)
+                    {
+                        itemTbl.AddCell(new PdfPCell(new Phrase(val, textFont))
+                        {
+                            BackgroundColor = bg,
+                            Padding = 4,
+                            BorderColor = borderGray,
+                            HorizontalAlignment = align
+                        });
+                    }
+
+                    AddCell(srNo.ToString(), Element.ALIGN_CENTER);
+                    AddCell(item.ItemCode ?? "");
+                    AddCell(item.ItemName ?? "");
+                    AddCell(item.Quantity.ToString("N2"), Element.ALIGN_CENTER);
+                    AddCell("₹ " + item.CostPerUnit.ToString("N2"), Element.ALIGN_RIGHT);
+                    AddCell(item.Discount.ToString("N2") + " %", Element.ALIGN_RIGHT);
+                    AddCell(item.GSTPct.ToString("N2") + " %", Element.ALIGN_CENTER);
+                    AddCell("₹ " + totalAmount.ToString("N2"), Element.ALIGN_RIGHT);
+
+                    srNo++;
+                }
+
+                doc.Add(itemTbl);
+
+                // === SECTION 4: TOTALS ===
+                PdfPTable totalTbl = new PdfPTable(2) { WidthPercentage = 40, HorizontalAlignment = Element.ALIGN_RIGHT };
+                totalTbl.SetWidths(new float[] { 1f, 1f });
+
+                void AddTotalRow(string label, decimal value, bool highlight = false)
+                {
+                    totalTbl.AddCell(new PdfPCell(new Phrase(label, highlight ? labelFont : textFont))
+                    {
+                        BackgroundColor = highlight ? softBlue : BaseColor.WHITE,
+                        Padding = 5,
+                        BorderColor = borderGray
+                    });
+                    totalTbl.AddCell(new PdfPCell(new Phrase("₹ " + value.ToString("N2"), highlight ? labelFont : textFont))
+                    {
+                        BackgroundColor = highlight ? softBlue : BaseColor.WHITE,
+                        Padding = 5,
+                        BorderColor = borderGray,
+                        HorizontalAlignment = Element.ALIGN_RIGHT
+                    });
+                }
+
+                AddTotalRow("Subtotal", subTotal);
+                AddTotalRow("Shipping Charges", totalShipping);
+                AddTotalRow("Grand Total", grandTotal, highlight: true);
+                doc.Add(totalTbl);
+
+                // === TERMS & CONDITIONS AT BOTTOM ===
+                if (!string.IsNullOrEmpty(po?.TermConditionName))
+                {
+                    // Header
+                    var tcHeader = new iTextSharp.text.Paragraph("TERMS & CONDITIONS", sectionFont)
+                    {
+                        SpacingBefore = 10f,
+                        SpacingAfter = 5f
+                    };
+                    doc.Add(tcHeader);
+
+                    // Ordered list (1, 2, 3...)
+                    var tcList = new iTextSharp.text.List(iTextSharp.text.List.ORDERED, 10f);
+                    string[] terms = po.TermConditionName.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+
+                    foreach (var term in terms)
+                    {
+                        tcList.Add(new iTextSharp.text.ListItem(term.Trim(), textFont));
+                    }
+
+                    doc.Add(tcList);
+                }
+
+
+                doc.Close();
+                return ms.ToArray();
+            }
+        }
+
+
+        //nurdr
 
 
 
@@ -1149,10 +1628,28 @@ namespace P2PERP.Controllers
                 return Json(new { success = true, data = pr }, JsonRequestBehavior.AllowGet);
             }
 
-            /// <summary>
-            /// Returns requisition item details for given PR code.
-            /// </summary>
-            public async Task<JsonResult> ItemPartialSP(string id)
+        /// <summary>
+        /// Returns requisition header details for given PR code.
+        /// </summary>
+        public async Task<JsonResult> DescriptionSP(string id)
+        {
+
+            if (string.IsNullOrEmpty(id))
+                return Json(new { success = false, message = "PR not found" }, JsonRequestBehavior.AllowGet);
+
+            BALPurchase bal = new BALPurchase();
+            var pr = await bal.GetPRByCodeDesSP(id);
+
+            if (pr == null)
+                return Json(new { success = false, message = "PR not found" }, JsonRequestBehavior.AllowGet);
+
+            return Json(new { success = true, data = pr }, JsonRequestBehavior.AllowGet);
+        }
+
+        /// <summary>
+        /// Returns requisition item details for given PR code.
+        /// </summary>
+        public async Task<JsonResult> ItemPartialSP(string id)
             {
 
                 if (string.IsNullOrEmpty(id))
@@ -1208,11 +1705,31 @@ namespace P2PERP.Controllers
                     return Json(new { error = ex.Message }, JsonRequestBehavior.AllowGet);
                 }
             }
+        /// <summary>
+        /// Returns all approved requisitions (status = 1).
+        /// </summary>
+        public async Task<JsonResult> GetRejectedPRSP()
+        {
+            try
+            {
+                var list = await Task.Run(() => bal.GetPendingPRSP(2));
 
-            /// <summary>
-            /// Updates item quantity in requisition based on PRItemId.
-            /// </summary>
-            [HttpPost]
+                if (list == null)
+                    list = new List<Purchase>();
+
+                return Json(list, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+
+                return Json(new { error = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+        /// <summary>
+        /// Updates item quantity in requisition based on PRItemId.
+        /// </summary>
+        [HttpPost]
             public async Task<JsonResult> UpdateItemQuantitySP(int PRItemId, int requiredQuantity)
             {
                 await bal.UpdateItemQuantitySP(PRItemId, requiredQuantity);
@@ -2513,9 +3030,10 @@ namespace P2PERP.Controllers
                 using (MailMessage mail = new MailMessage())
                 {
                     //mail.From = new MailAddress("sandeshjatti5329@gmail.com", "Rahitech IT Solution");
-                    mail.From = new MailAddress("gstprocurmenterp@gmail.com", "Procurement System");
+                   // mail.From = new MailAddress("gstprocurmenterp@gmail.com", "Procurement System");
+                    mail.From = new MailAddress(WebConfigurationManager.AppSettings["MainEmail"], "Procurement System");
                     mail.To.Add(vendorEmail);
-                   // mail.To.Add("kumbharomkar765@gmail.com"); // Test email
+                   // mail.To.Add("kumbharomkar765@gmail.com"w); // Test email
                     mail.Subject = $"Purchase Order - {POCode}";
                     mail.Body = $"Dear {vendorName},\n\nPlease find attached the Purchase Order #{POCode}.\n\nThank you.\n\nRegards,\nYour Company";
                     mail.IsBodyHtml = false;
@@ -2525,7 +3043,8 @@ namespace P2PERP.Controllers
 
                     using (SmtpClient smtp = new SmtpClient("smtp.gmail.com", 587))
                     {
-                        smtp.Credentials = new NetworkCredential("gstprocurmenterp@gmail.com", "lhrlntigzidizmju");
+                       // smtp.Credentials = new NetworkCredential("gstprocurmenterp@gmail.com", "lhrlntigzidizmju");
+                        smtp.Credentials = new NetworkCredential(WebConfigurationManager.AppSettings["MainEmail"], WebConfigurationManager.AppSettings["AppPassword"]);
                         smtp.EnableSsl = true;
                         await smtp.SendMailAsync(mail);
                     }
@@ -2537,6 +3056,61 @@ namespace P2PERP.Controllers
                 Console.WriteLine("Email Error: " + ex.Message);
             }
         }
+
+
+
+        [HttpGet]
+        public async Task<JsonResult> GetRejectedPODetailsOK(string POCode)
+        {
+            DataSet ds = await bal.FetchPODetailsByPOCodeForOPDFOK(POCode);
+
+            if (ds == null || ds.Tables.Count < 2 || ds.Tables[0].Rows.Count == 0)
+                return Json(new { success = false, message = "No data found." }, JsonRequestBehavior.AllowGet);
+
+            // ===== PO Main Details =====
+            var row = ds.Tables[0].Rows[0];
+            var po = new
+            {
+                CompanyName = row["CompanyName"].ToString(),
+                CompanyAddress = row["CompanyAddress"].ToString(),
+                CompanyPhone = row["CompanyPhone"].ToString(),
+                CompanyEmail = row["CompanyEmail"].ToString(),
+                Website = row["Website"].ToString(),
+                POCode = row["POCode"].ToString(),
+                AddedDate = Convert.ToDateTime(row["AddedDate"]).ToString("yyyy-MM-dd"),
+                ShippingCharges = Convert.ToDecimal(row["ShippingCharges"]),
+                ApprovedBy = row["ApprovedRejectedByName"].ToString(),
+                ApprovedRejectedDate = Convert.ToDateTime(row["ApprovedRejectedDate"]).ToString("yyyy-MM-dd"),
+                Note = row["Note"].ToString(),
+                VendorName = row["VenderName"].ToString(),
+                VendorAddress = row["VendorAddress"].ToString(),
+                VendorPhone = row["VendorPhone"].ToString(),
+                VendorEmail = row["VendorEmail"].ToString(),
+                WarehouseName = row["WarehouseName"].ToString(),
+                WarehouseAddress = row["WarehouseAddress"].ToString(),
+                WarehousePhone = row["WarehousePhone"].ToString(),
+                WarehouseEmail = row["WarehouseEmail"].ToString(),
+                SubAmount = Convert.ToDecimal(row["SubAmount"]),
+                GrandTotal = Convert.ToDecimal(row["GrandTotal"])
+            };
+
+            // ===== Item Details =====
+            var poItems = ds.Tables[1].AsEnumerable().Select(dr => new
+            {
+                ItemCode = dr["ItemCode"].ToString(),
+                ItemName = dr["ItemName"].ToString(),
+                Quantity = Convert.ToInt32(dr["Quantity"]),
+                Description = dr["Description"].ToString(),
+                UOM = dr["UOMName"].ToString(),
+                CostPerUnit = Convert.ToDecimal(dr["CostPerUnit"]),
+                Discount = dr["Discount"].ToString(),
+                GST = dr["GST"].ToString(),
+                Amount = Convert.ToDecimal(dr["Amount"])
+            }).ToList();
+
+            return Json(new { success = true, po, poItems }, JsonRequestBehavior.AllowGet);
+        }
+
 
         #endregion
 
@@ -2607,18 +3181,39 @@ namespace P2PERP.Controllers
 
 
         // Get all PR list (JSON)
-        public async Task<ActionResult> ShowAllPRK()
+        public async Task<ActionResult> ShowAllPRK(DateTime startDate, DateTime endDate)
         {
 
-            var data = await bal.ShowAllPRPRK();
+            var data = await bal.ShowAllPRPRK(startDate, endDate);
             return Json(data, JsonRequestBehavior.AllowGet);
         }
 
         // Partial view for all PR
-        public ActionResult ShowAllPRPartialPRK()
+        public ActionResult ShowAllPRPartialPRK(DateTime? startDate, DateTime? endDate)
         {
+            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
             return PartialView("_ShowAllPRPartialPRK");
         }
+
+        // Get all PO list (JSON)
+        public async Task<ActionResult> ShowAllPOPRK(DateTime startDate, DateTime endDate)
+        {
+
+            var data = await bal.ShowAllPOPRK(startDate, endDate);
+            return Json(data, JsonRequestBehavior.AllowGet);
+        }
+
+        // Partial view for all PO
+        public ActionResult ShowAllPOPartialPRK(DateTime? startDate, DateTime? endDate)
+        {
+            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
+            return PartialView("_ShowAllPOPartialPRK");
+        }
+
+
+
 
         // Pending PR main view
         public ActionResult ShowPendingPRPRK()
@@ -2648,34 +3243,79 @@ namespace P2PERP.Controllers
 
       
 
-        // Rejected PR main view
-        public ActionResult ShowRejectedPRPRK()
-        {
-            if (Session["StaffCode"] == null)
-                return RedirectToAction("MainLogin", "Account");
+       
 
-            return View();
+      
+
+        // Partial view for rejected PR
+        public ActionResult ShowRejectedPRPartialPRK(DateTime? startDate, DateTime? endDate)
+        {
+            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
+            return PartialView("_ShowRejectedPRPartialPRK");
         }
 
-        // Get rejected PR list (JSON)
-        public async Task<ActionResult> ShowRejectPRK()
+
+        // Get rejected PO list (JSON)
+        public async Task<ActionResult> ShowRejectPOPRK(DateTime startDate, DateTime endDate)
         {
-            var data = await bal.ShowRejectedPRPRK();
+            var data = await bal.ShowRejectedPOPRK(startDate, endDate);
             return Json(data, JsonRequestBehavior.AllowGet);
         }
 
         // Partial view for rejected PR
-        public ActionResult ShowRejectedPRPartialPRK()
+        public ActionResult ShowRejectedOPartialPRK(DateTime? startDate, DateTime? endDate)
         {
-            return PartialView("_ShowRejectedPRPartialPRK");
+            ViewBag.StartDate = startDate?.ToString("yyyy-MM-dd");
+            ViewBag.EndDate = endDate?.ToString("yyyy-MM-dd");
+            return PartialView("_ShowRejectedOPartialPRK");
         }
 
-        // Rejected PR items partial (by PRCode)
-        public ActionResult ShowRejectedPRItemPRK(string prCode)
+        ////////////////////////////////////////////
+
+
+
+        //// Rejected PR main view
+        //public ActionResult ShowRejectedPRPRK()
+        //{
+        //    if (Session["StaffCode"] == null)
+        //        return RedirectToAction("MainLogin", "Account");
+
+        //    return View();
+        //}
+
+        //// Get rejected PR list (JSON)
+        //public async Task<ActionResult> ShowRejectPRK()
+        //{
+        //    var data = await bal.ShowRejectedPRmainPRK();
+        //    return Json(data, JsonRequestBehavior.AllowGet);
+        //}
+
+
+
+        //// Rejected PR items partial (by PRCode)
+        //public ActionResult ShowRejectedPRItemPRK(string prCode)
+        //{
+        //    ViewBag.PRCode = prCode;
+        //    return PartialView("_ShowRejectedPRItemPRK");
+        //}
+
+
+
+        // Pending PR main view
+        public ActionResult ShowRejectedPRPRK()
         {
-            ViewBag.PRCode = prCode;
-            return PartialView("_ShowRejectedPRItemPRK");
+            return View();
         }
+
+        // Get pending PR list (JSON)
+        public async Task<ActionResult> ShowRejectPRK()
+        {
+            var data = await bal.ShowRejectedPRmainPRK();
+            return Json(data, JsonRequestBehavior.AllowGet);
+        }
+
+
 
         // Get rejected PR items (JSON by PRCode)
         public async Task<ActionResult> ShowRejectedPRItemsPRK(string prCode)
@@ -2699,10 +3339,13 @@ namespace P2PERP.Controllers
         }
 
         // Partial view for rejected PR items
-        public ActionResult ShowRejectedPRItemPartialPRK()
+        public ActionResult ShowRejectedPRItemPartialPRK(string prCode)
         {
+
+            ViewBag.PRCode = prCode;
             return PartialView("_ShowRejectedPRItemPartialPRK");
         }
+
 
         // Pending PR items partial (by PRCode)
         public ActionResult ShowPendingPRItemPRK(string prCode)

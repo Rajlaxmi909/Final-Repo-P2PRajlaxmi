@@ -20,6 +20,8 @@ namespace P2PERP.Controllers
     {
         BALInventory bal = new BALInventory();
         // GET: InventoryP2P
+        [Route("Inventory/InventoryDashboard")]
+        [HttpGet]
         public ActionResult Index()
         {
             var RoleId = Convert.ToInt32(Session["RoleId"]);
@@ -215,6 +217,7 @@ namespace P2PERP.Controllers
                     InventoryDRB ReceiveMaterial = new InventoryDRB
                     {
                         GRNCode = dr["GRNCode"].ToString(),
+                        SupplierName = dr["SupplierName"].ToString(),
                         AddedDate = Convert.ToDateTime(dr["AddedDate"]).ToString("dd/MM/yyyy"),
                     };
 
