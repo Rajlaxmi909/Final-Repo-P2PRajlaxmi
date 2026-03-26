@@ -1,48 +1,164 @@
-﻿
-@model P2PLibray.Inventory.Inventory
+﻿@model P2PLibray.Inventory.InventoryMHB
 
-<div class="card p-3 bg-light">
-    <h4>Raise Order</h4>
-    <form id="raiseOrderForm" method="post" action="/Inventory/SubmitPRMHB">
+<div class="card p-3">
+    <form id="raiseOrderForm" method="post" action="/Inventory/SubmitPRMHB" novalidate>
         <div class="row mb-2">
             <div class="col">
-                <label>Item Name</label>
-                <input type="text" class="form-control" value="@Model.ItemName" readonly />
+                <label class="form-label form-label-sm fw-bold text-dark">Item Name</label>
+                <input type="text" class="form-control form-control-sm  text-dark shadow-sm bg-light " value="@Model.ItemName" readonly />
             </div>
             <div class="col">
-                <label>Item Code</label>
-                <input type="text" name="ItemCode" class="form-control" value="@Model.ItemCode" readonly />
+                <label class="form-label form-label-sm fw-bold text-dark">Item Code</label>
+                <input type="text" name="ItemCode" class="form-control form-control-sm  text-dark shadow-sm bg-light" value="@Model.ItemCode" readonly />
             </div>
         </div>
 
         <div class="row mb-2">
             <div class="col">
-                <label>Quantity</label>
-                <input type="number" name="Quantity" class="form-control" required />
+                <label class="form-label form-label-sm fw-bold text-dark">Quantity <span class="required-star">*</span></label>
+                <input type="number" id="Quantity" name="Quantity" class="form-control form-control-sm  text-dark shadow-sm "
+                       placeholder="Order Quantity upto @Model.ReorderQuantity"
+                       min="1"
+                       max="@Model.ReorderQuantity"
+                       required />
+                <small class="text-danger d-none" id="qtyError"></small>
             </div>
             <div class="col">
-                <label>UOM</label>
-                <input type="text" class="form-control" value="@Model.UOMName" readonly />
+                <label class="form-label form-label-sm fw-bold text-dark">UOM</label>
+                <input type="text" class="form-control form-control-sm  text-dark shadow-sm bg-light" value="@Model.UOMName" readonly />
             </div>
         </div>
 
         <div class="row mb-2">
             <div class="col">
-                <label>Description</label>
-                <textarea name="Description" class="form-control" readonly>@Model.Description</textarea>
+                <label class="form-label form-label-sm fw-bold text-dark">Description</label>
+                <textarea name="Description" class="form-control form-control-sm  text-dark shadow-sm bg-light" readonly>@Model.Description</textarea>
             </div>
             <div class="col">
-                <label for="RequiredDate">Required Date</label>
+                <label for="RequiredDate" class="form-label form-label-sm fw-bold text-dark">Required Date <span class="required-star">*</span></label>
                 <input type="date" id="RequiredDate" name="RequiredDate"
-                       class="form-control" required
-                       min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                       class="form-control form-control-sm  text-dark shadow-sm "
+                       min="@DateTime.Now.AddDays(5).ToString("yyyy-MM-dd")"
+                       required />
+                <small class="text-danger d-none" id="dateError"></small>
             </div>
-
         </div>
 
         <div class="text-end">
-            <button type="submit" class="btn btn-success">Submit for PR</button>
+            <button type="submit" class="btn btn-success btn-sm">Submit for PR</button>
         </div>
     </form>
 </div>
 
+<style>
+    .required-star {
+        color: red;
+        font-size: 1em;
+        font-weight: bold;
+        vertical-align: middle;
+        position: relative;
+        top: -4px;
+    }
+
+    /* red border + subtle glow */
+    .error-border {
+        border: 2px solid #dc3545 !important;
+        box-shadow: 0 0 6px rgba(220, 53, 69, 0.25);
+    }
+</style>
+
+<script>
+$(function () {
+
+    var $form = $('#raiseOrderForm');
+    var $qty = $('#Quantity');
+    var $date = $('#RequiredDate');
+    var $qtyErr = $('#qtyError');
+    var $dateErr = $('#dateError');
+
+    var maxQty = parseFloat("@Model.ReorderQuantity") || 0;
+
+    // Defensive check
+    if ($form.length === 0) return;
+
+    // 🔹 Quantity Validation
+    $qty.on('input', function () {
+
+        let qtty = parseInt($(this).val());
+
+        if (isNaN(qtty) || qtty <= 0) {
+            showError($qty, $qtyErr, "Quantity must be greater than 0");
+
+            return;
+        }
+
+        if (qtty > maxQty) {
+            $(this).val(maxQty);
+            showError($qty, $qtyErr, "Max quantity is " + maxQty);
+
+        }
+        if (qtty == maxQty) {
+            $(this).val(maxQty);
+
+            clearError($qty, $qtyErr);
+        }
+        else {
+            clearError($qty, $qtyErr);
+        }
+
+    });
+
+    // 🔹 Date Clear Error
+    $date.on('change input', function () {
+        clearError($date, $dateErr);
+    });
+
+    // 🔹 Submit Validation
+    $form.on('submit', function (ev) {
+
+        var valid = true;
+
+        let qtyNum = parseFloat($qty.val());
+
+        if (isNaN(qtyNum) || qtyNum < 1 || qtyNum > maxQty) {
+            showError($qty, $qtyErr, "Quantity must be between 1 and " + maxQty);
+            valid = false;
+        }
+
+        let dateVal = $date.val();
+
+        if (!dateVal) {
+            showError($date, $dateErr, "Please select date");
+            valid = false;
+        }
+        else {
+            let selectedDate = new Date(dateVal);
+            let today = new Date();
+            today.setHours(0,0,0,0);
+
+            if (selectedDate < today) {
+                showError($date, $dateErr, "Date cannot be past");
+                valid = false;
+            }
+        }
+
+        if (!valid) {
+            ev.preventDefault();
+            return false;
+        }
+
+    });
+
+    // 🔹 Helper Functions
+    function showError($input, $errElem, message) {
+        $input.addClass('error-border');
+        $errElem.text(message).removeClass('d-none');
+    }
+
+    function clearError($input, $errElem) {
+        $input.removeClass('error-border');
+        $errElem.text('').addClass('d-none');
+    }
+
+});
+</script>

@@ -1,19 +1,30 @@
-﻿using P2PLibray.Account;
+﻿using iTextSharp.text;
+using iTextSharp.text.pdf;
+using iTextSharp.text.pdf.draw;
+using P2PLibray.Account;
 using P2PLibray.GRN;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using static P2PLibray.GRN.GRNPSM;
 
 namespace P2PERP.Controllers
 {
     public class GRNController : Controller
     {
         BALGRN bal = new BALGRN();
+
+       
 
         #region Pranav Mane
         public async Task<ActionResult> UserProfile()
@@ -54,6 +65,7 @@ namespace P2PERP.Controllers
         }
 
         // ---- Loads the Rejected Goods page
+        [DisplayName("Rejected Goods")]
         public ActionResult RejectedGoods()
         {
             return View();
@@ -98,7 +110,6 @@ namespace P2PERP.Controllers
                     ReturnGoodsClass ReturnGoods = new ReturnGoodsClass
                     {
                         GRNCode = dr["GRNCode"].ToString(),
-                        StatusName = dr["StatusName"].ToString(),
                         AddedDate = Convert.ToDateTime(dr["AddedDate"]).ToString("yyyy-MM-dd"),
                         FullName = dr["FullName"].ToString()
                     };
@@ -204,49 +215,99 @@ namespace P2PERP.Controllers
                 return Json(new { success = false, message = "Error: " + ex.Message });
             }
         }
+
+        [Route("GRN/SendMail")]
+        [HttpGet]
+        public ActionResult SendMailHSB()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult SendMailHSB(HttpPostedFileBase attachment, string toEmail, string subject, string messageBody)
+        {
+            try
+            {
+                string fromEmail = System.Configuration.ConfigurationManager.AppSettings["SenderEmail"];
+                string password = System.Configuration.ConfigurationManager.AppSettings["SenderPassword"];
+
+                MailMessage mail = new MailMessage();
+                mail.From = new MailAddress(fromEmail);
+                mail.To.Add(toEmail);
+                mail.Subject = subject;
+                mail.Body = messageBody;
+                mail.IsBodyHtml = true;
+
+                // Add attachment if provided
+                if (attachment != null && attachment.ContentLength > 0)
+                {
+                    string fileName = Path.GetFileName(attachment.FileName);
+                    mail.Attachments.Add(new Attachment(attachment.InputStream, fileName));
+                }
+
+                SmtpClient smtp = new SmtpClient("smtp.gmail.com")
+                {
+                    Port = 587,
+                    Credentials = new NetworkCredential(fromEmail, password),
+                    EnableSsl = true
+                };
+
+                smtp.Send(mail);
+                ViewBag.Status = "Email sent successfully!";
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Status = "Error: " + ex.Message;
+            }
+
+            return View();
+        }
+
         #endregion
 
         #region Pravin
 
         //GRN Summary Report Action Methods
+        [DisplayName("GRN Summary Reports")]
         public ActionResult GRNSummaryReportPSM()
         {
             return View();
         }
 
 
-
-        // Fetch Pie Chart GRN summary
+        //Total GRN Count
         [HttpGet]
-        public async Task<JsonResult> GRNPieChartPSM(DateTime? fromDate, DateTime? toDate)
+        public async Task<JsonResult> GRNPieChartPSM(string fromDate, string toDate)
         {
             BALGRN obj = new BALGRN();
-            DataTable dt = await obj.GRNSummaryPSM(); // returns AddedDate, TotalGRN per day
+            DataTable dt = await obj.GRNSummaryPSM();
 
             int totalGRN = 0;
+            DateTime? from = null, to = null;
+
+            if (DateTime.TryParse(fromDate, out DateTime fd)) from = fd;
+            if (DateTime.TryParse(toDate, out DateTime td)) to = td;
 
             if (dt != null && dt.Rows.Count > 0)
             {
-                if (fromDate.HasValue && toDate.HasValue)
+                var filteredRows = dt.AsEnumerable();
+
+                if (from.HasValue && to.HasValue)
                 {
-                    // Sum TotalGRN for rows within the date range
-                    totalGRN = dt.AsEnumerable()
-                                 .Where(r =>
-                                 {
-                                     var date = r.Field<DateTime>("AddedDate");
-                                     return date.Date >= fromDate.Value.Date && date.Date <= toDate.Value.Date;
-                                 })
-                                 .Sum(r => r.Field<int>("TotalGRN"));
+                    filteredRows = filteredRows.Where(r =>
+                    {
+                        var date = r.Field<DateTime>("AddedDate").Date;
+                        return date >= from.Value.Date && date <= to.Value.Date;
+                    });
                 }
-                else
-                {
-                    // No filter, sum all TotalGRN
-                    totalGRN = dt.AsEnumerable().Sum(r => r.Field<int>("TotalGRN"));
-                }
+
+                totalGRN = filteredRows.Sum(r => r.Field<int>("TotalGRN"));
             }
 
             return Json(new { TotalGRN = totalGRN }, JsonRequestBehavior.AllowGet);
         }
+
+
 
         //Retrieves GRN item details by GRN code for display.
         [HttpGet]
@@ -270,10 +331,14 @@ namespace P2PERP.Controllers
 
         // Fetch GRN Reoprt list in Datatable
         [HttpGet]
-        public async Task<JsonResult> AllGRNSummaryListPSM(DateTime? fromDate, DateTime? toDate)
+        public async Task<JsonResult> AllGRNSummaryListPSM(string fromDate, string toDate)
         {
             BALGRN obj = new BALGRN();
             List<object> materials = new List<object>();
+
+            DateTime? from = null, to = null;
+            if (DateTime.TryParse(fromDate, out DateTime fd)) from = fd.Date;
+            if (DateTime.TryParse(toDate, out DateTime td)) to = td.Date;
 
             SqlDataReader dr = await obj.GRNSummaryListPSM();
 
@@ -282,8 +347,11 @@ namespace P2PERP.Controllers
                 if (!DateTime.TryParse(dr["AddedDate"].ToString(), out DateTime addedDate))
                     continue;
 
-                if ((!fromDate.HasValue || addedDate >= fromDate.Value) &&
-                    (!toDate.HasValue || addedDate <= toDate.Value))
+                // ✅ Compare only the Date part
+                DateTime addedDateOnly = addedDate.Date;
+
+                if ((!from.HasValue || addedDateOnly >= from.Value) &&
+                    (!to.HasValue || addedDateOnly <= to.Value))
                 {
                     materials.Add(new
                     {
@@ -292,7 +360,7 @@ namespace P2PERP.Controllers
                         VendorName = dr["VendorName"]?.ToString() ?? "",
                         CompanyName = dr["CompanyName"]?.ToString() ?? "",
                         AddedBy = dr["AddedBy"]?.ToString() ?? "",
-                        AddedDate = addedDate.ToString("yyyy-MM-dd"),
+                        AddedDate = addedDateOnly.ToString("yyyy-MM-dd"),
                         TotalAmount = dr["TotalAmount"]?.ToString() ?? ""
                     });
                 }
@@ -304,84 +372,155 @@ namespace P2PERP.Controllers
 
 
 
+
         //Return Good Report Action Methods
+        [DisplayName("Purchase Return Summary Reports")]
         public ActionResult GoodsReturnSummaryReportPSM()
         {
             return View();
         }
 
-        //Return Good Data Show in Bar Chart
+        //Alternative - Use same approach as table method
         public async Task<JsonResult> GoodsReturnChartsPSM(string fromDate, string toDate)
         {
-            BALGRN obj = new BALGRN();
-            DataTable dt = await obj.GoodsReturnSummaryPSM();
+            try
+            {
+                BALGRN obj = new BALGRN();
+                List<object> goodsReturns = new List<object>();
 
-            DateTime? fDate = string.IsNullOrEmpty(fromDate) ? (DateTime?)null : DateTime.Parse(fromDate);
-            DateTime? tDate = string.IsNullOrEmpty(toDate) ? (DateTime?)null : DateTime.Parse(toDate);
+                SqlDataReader dr = await obj.GoodsReturnSummaryListPSM();
 
-            var result = dt.AsEnumerable()
-                .Where(row =>
+                DateTime? fDate = null;
+                DateTime? tDate = null;
+
+                // Parse dates safely (same as table method)
+                if (!string.IsNullOrEmpty(fromDate))
                 {
-                    if (!DateTime.TryParse(row["AddedDate"].ToString(), out DateTime addedDate))
-                        return false;
+                    if (DateTime.TryParseExact(fromDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedFromDate))
+                        fDate = parsedFromDate;
+                }
 
-                    return (!fDate.HasValue || addedDate >= fDate.Value) &&
-                           (!tDate.HasValue || addedDate <= tDate.Value);
-                })
-                .GroupBy(row => new
+                if (!string.IsNullOrEmpty(toDate))
                 {
-                    DayName = row["DayName"].ToString(),
-                    StatusName = row["StatusName"].ToString()
-                })
-                .Select(g => new
-                {
-                    DayName = g.Key.DayName,
-                    StatusName = g.Key.StatusName,
-                    Count = g.Count()
-                })
-                .ToList();
+                    if (DateTime.TryParseExact(toDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedToDate))
+                        tDate = parsedToDate;
+                }
 
-            return Json(result, JsonRequestBehavior.AllowGet);
+                // Count statuses directly from the data reader
+                int assignCount = 0;
+                int dispatchCount = 0;
+
+                while (await dr.ReadAsync())
+                {
+                    if (!DateTime.TryParse(dr["AddedDate"]?.ToString(), out DateTime addedDate))
+                        continue;
+
+                    // Apply date filtering (same as table method)
+                    bool include = true;
+                    if (fDate.HasValue)
+                        include = include && (addedDate.Date >= fDate.Value.Date);
+                    if (tDate.HasValue)
+                        include = include && (addedDate.Date <= tDate.Value.Date);
+
+                    if (include)
+                    {
+                        var statusName = dr["StatusName"]?.ToString() ?? "";
+                        if (statusName.Equals("Assign", StringComparison.OrdinalIgnoreCase))
+                            assignCount++;
+                        else if (statusName.Equals("Dispatch", StringComparison.OrdinalIgnoreCase))
+                            dispatchCount++;
+                    }
+                }
+
+                dr.Close();
+
+                var result = new List<object>
+        {
+            new { StatusName = "Assign", Count = assignCount },
+            new { StatusName = "Dispatch", Count = dispatchCount }
+        };
+
+                return Json(result, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GoodsReturnChartsPSM: {ex.Message}");
+                return Json(new[] {
+            new { StatusName = "Assign", Count = 0 },
+            new { StatusName = "Dispatch", Count = 0 }
+           }, JsonRequestBehavior.AllowGet);
+            }
         }
 
-
-        // Goods return summary report show in Datatable
+        // Goods return summary report show in Datatable with Date Filtering
         [HttpGet]
-        public async Task<JsonResult> GetGoodsReturnSummaryPSM(DateTime? fromDate, DateTime? toDate)
+        public async Task<JsonResult> GetGoodsReturnSummaryPSM(string fromDate, string toDate)
         {
-            BALGRN obj = new BALGRN();
-            List<object> goodsReturns = new List<object>();
-
-            SqlDataReader dr = await obj.GoodsReturnSummaryListPSM();
-
-            while (await dr.ReadAsync())
+            try
             {
-                if (!DateTime.TryParse(dr["AddedDate"].ToString(), out DateTime addedDate))
-                    continue;
-                if ((!fromDate.HasValue || addedDate >= fromDate.Value) &&
-                    (!toDate.HasValue || addedDate <= toDate.Value))
+                BALGRN obj = new BALGRN();
+                List<object> goodsReturns = new List<object>();
+
+                SqlDataReader dr = await obj.GoodsReturnSummaryListPSM();
+
+                DateTime? fDate = null;
+                DateTime? tDate = null;
+
+                // Parse dates safely
+                if (!string.IsNullOrEmpty(fromDate))
                 {
-                    goodsReturns.Add(new
-                    {
-                        GoodsReturnCode = dr["GoodsReturnCode"]?.ToString() ?? "",
-                        TransporterName = dr["TransporterName"]?.ToString() ?? "",
-                        TransportContactNo = dr["TransportContactNo"]?.ToString() ?? "",
-                        VehicleNo = dr["VehicleNo"]?.ToString() ?? "",
-                        VehicleTypeName = dr["VehicleTypeName"]?.ToString() ?? "",
-                        Reason = dr["Reason"]?.ToString() ?? "",
-                        StatusName = dr["StatusName"]?.ToString() ?? "",
-                        AddedDate = addedDate.ToString("yyyy-MM-dd")
-                    });
+                    if (DateTime.TryParseExact(fromDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedFromDate))
+                        fDate = parsedFromDate;
                 }
+
+                if (!string.IsNullOrEmpty(toDate))
+                {
+                    if (DateTime.TryParseExact(toDate, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedToDate))
+                        tDate = parsedToDate;
+                }
+
+                while (await dr.ReadAsync())
+                {
+                    if (!DateTime.TryParse(dr["AddedDate"]?.ToString(), out DateTime addedDate))
+                        continue;
+
+                    // Apply date filtering
+                    bool include = true;
+                    if (fDate.HasValue)
+                        include = include && (addedDate.Date >= fDate.Value.Date);
+                    if (tDate.HasValue)
+                        include = include && (addedDate.Date <= tDate.Value.Date);
+
+                    if (include)
+                    {
+                        goodsReturns.Add(new
+                        {
+                            GoodsReturnCode = dr["GoodsReturnCode"]?.ToString() ?? "",
+                            TransporterName = dr["TransporterName"]?.ToString() ?? "",
+                            TransportContactNo = dr["TransportContactNo"]?.ToString() ?? "",
+                            VehicleNo = dr["VehicleNo"]?.ToString() ?? "",
+                            VehicleTypeName = dr["VehicleTypeName"]?.ToString() ?? "",
+                            Reason = dr["Reason"]?.ToString() ?? "",
+                            StatusName = dr["StatusName"]?.ToString() ?? "",
+                            AddedDate = addedDate.ToString("yyyy-MM-dd")
+                        });
+                    }
+                }
+
+                dr.Close();
+
+                return Json(new { data = goodsReturns }, JsonRequestBehavior.AllowGet);
             }
-
-            dr.Close();
-
-            return Json(new { data = goodsReturns }, JsonRequestBehavior.AllowGet);
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in GetGoodsReturnSummaryPSM: {ex.Message}");
+                return Json(new { data = new List<object>() }, JsonRequestBehavior.AllowGet);
+            }
         }
 
 
         //Quality check Report Action Method 
+        [DisplayName("Quality Check Reports")]
         public ActionResult GRNQualityCheckPSM()
         {
             return View();
@@ -455,6 +594,7 @@ namespace P2PERP.Controllers
 
 
         // Approved Purchase Order Item  Action Method
+        [DisplayName("Approved Purchase Order Reports")]
         public ActionResult ApprovedPOReportPSM()
         {
             return View();
@@ -511,7 +651,7 @@ namespace P2PERP.Controllers
                     if (eDate.HasValue && approvedDate > eDate.Value) return false;
                     return true;
                 })
-                .Select(row => new
+                .Select(row => new 
                 {
                     POCode = row["POCode"].ToString(),
                     RQNO = row["RQNO"].ToString(),
@@ -551,14 +691,54 @@ namespace P2PERP.Controllers
 
             return Json(new { data = result }, JsonRequestBehavior.AllowGet);
         }
+        [HttpGet]
+        public async Task<JsonResult> GetShippingChargesByPOPSM(string RQCode)
+        {
+            if (string.IsNullOrEmpty(RQCode))
+                return Json(new { success = false, ShippingCharges = 0 });
+
+            try
+            {
+                BALGRN objBAL = new BALGRN();
+
+                // Call your existing SP method
+                DataTable dt = await objBAL.RegistrationQuotationCodePSM(RQCode);
+
+                decimal shippingCharges = 0;
+
+                if (dt != null && dt.Rows.Count > 0 && dt.Columns.Contains("ShippingCharges"))
+                {
+                    shippingCharges = dt.Rows[0]["ShippingCharges"] != DBNull.Value
+                        ? Convert.ToDecimal(dt.Rows[0]["ShippingCharges"])
+                        : 0;
+                }
+
+                return Json(new { success = true, ShippingCharges = shippingCharges }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, ShippingCharges = 0, message = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
+
+
+
 
         #endregion
 
         #region Rushikesh
-
+        [DisplayName("Dashboard")]
         public ActionResult GRNDashboardRHK()
         {
             return View();
+        }
+        public async Task<ActionResult> GetGRNItemsByGRNCodePartialRHK(string grnCode)
+        {
+            if (string.IsNullOrEmpty(grnCode))
+                return PartialView("_GRNItemsPartialRHK", new List<GRN>());
+
+            var items = await bal.GetGRNItemsByGRNCode(grnCode);
+            return PartialView("_GRNItemsPartialRHK", items);
         }
 
         /// <summary>
@@ -646,6 +826,22 @@ namespace P2PERP.Controllers
                 return Json(new { count = 0 }, JsonRequestBehavior.AllowGet);
             }
         }
+        /// <summary>
+        /// Returns count of QC pending items between startDate and endDate.
+        /// </summary>
+        public async Task<JsonResult> GetPendingCountRHK(DateTime? startDate, DateTime? endDate)
+        {
+            try
+            {
+                DataTable dt = await bal.PendingCountRHK(startDate, endDate);
+                int count = (dt.Rows.Count > 0) ? Convert.ToInt32(dt.Rows[0]["PendingCount"]) : 0;
+                return Json(new { count = count }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception)
+            {
+                return Json(new { count = 0 }, JsonRequestBehavior.AllowGet);
+            }
+        }
 
         /// <summary>
         /// Returns count of upcoming items (in open POs not yet GRN’d).
@@ -672,48 +868,32 @@ namespace P2PERP.Controllers
             try
             {
                 DataSet ds = await bal.GRNTrendsRHK(startDate, endDate);
-                List<string> dates = new List<string>();
+
+                List<string> months = new List<string>();
                 List<int> counts = new List<int>();
 
                 if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
                 {
                     foreach (DataRow dr in ds.Tables[0].Rows)
                     {
-                        dates.Add(Convert.ToDateTime(dr["Date"]).ToString("MMM dd"));
+                        months.Add(dr["MonthName"].ToString());   // e.g. Jan 2025
                         counts.Add(Convert.ToInt32(dr["GRNCount"]));
                     }
                 }
-                else
-                {
-                    // No records → Return all dates with 0
-                    DateTime currentDate = (DateTime)startDate;
-                    while (currentDate <= endDate)
-                    {
-                        dates.Add(currentDate.ToString("MMM dd"));
-                        counts.Add(0);
-                        currentDate = currentDate.AddDays(1);
-                    }
-                }
 
-                return Json(new { dates = dates, counts = counts }, JsonRequestBehavior.AllowGet);
+                return Json(new { months = months, counts = counts }, JsonRequestBehavior.AllowGet);
             }
             catch (Exception)
             {
-                // Return default 0 values in case of error
-                List<string> dates = new List<string>();
-                List<int> counts = new List<int>();
-
-                DateTime currentDate = (DateTime)startDate;
-                while (currentDate <= endDate)
+                // In case of error, return empty monthly chart
+                return Json(new
                 {
-                    dates.Add(currentDate.ToString("MMM dd"));
-                    counts.Add(0);
-                    currentDate = currentDate.AddDays(1);
-                }
-
-                return Json(new { dates = dates, counts = counts }, JsonRequestBehavior.AllowGet);
+                    months = new List<string>(),
+                    counts = new List<int>()
+                }, JsonRequestBehavior.AllowGet);
             }
         }
+
 
         /// <summary>
         /// Returns last 10 recent GRNs with vendor, PO, invoice, and status.
@@ -858,6 +1038,7 @@ namespace P2PERP.Controllers
                     GRNCode = dr["GRNCode"].ToString(),
                     ItemName = dr["ItemName"].ToString(),
                     Quantity = Convert.ToInt32(dr["Quantity"]),
+                    IsQuality = dr["ISQuality"].ToString(),
                 });
             }
 
@@ -904,7 +1085,9 @@ namespace P2PERP.Controllers
                     POCode = dr["POCode"].ToString(),
                     ItemCode = dr["ItemCode"].ToString(),
                     ItemName = dr["ItemName"].ToString(),
-                    Quantity = Convert.ToInt32(dr["Quantity"]),
+                    OrderQuantity = Convert.ToInt32(dr["OrderedQty"]),
+                    RecievedQuantity = Convert.ToInt32(dr["ReceivedQty"]),
+                    PendingQuantity = Convert.ToInt32(dr["PendingQty"]),
                     ExpectedDate = Convert.ToDateTime(dr["VendorDeliveryDate"]),
                     OrderedBy = dr["AddedBy"].ToString(),
                 });
@@ -993,6 +1176,7 @@ namespace P2PERP.Controllers
 
 
         // Returns the main GRN page view
+        [DisplayName("Goods Receive Notes")]
         public ActionResult GRNSSG()
         {
             return View();
@@ -1055,8 +1239,15 @@ namespace P2PERP.Controllers
         {
             try
             {
-                DateTime? from = string.IsNullOrEmpty(fromDate) ? (DateTime?)null : DateTime.Parse(fromDate);
-                DateTime? to = string.IsNullOrEmpty(toDate) ? (DateTime?)null : DateTime.Parse(toDate);
+                DateTime? from = null;
+                DateTime? to = null;
+
+                if (!string.IsNullOrEmpty(fromDate))
+                    from = DateTime.ParseExact(fromDate, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+                if (!string.IsNullOrEmpty(toDate))
+                    to = DateTime.ParseExact(toDate, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+
                 DataSet ds = await bal.ShowGRNListSSG();
                 List<GRN> grnList = new List<GRN>();
 
@@ -1064,10 +1255,13 @@ namespace P2PERP.Controllers
                 {
                     foreach (DataRow row in ds.Tables[0].Rows)
                     {
-                        DateTime? grnDate = row["GRNDate"] != DBNull.Value ? Convert.ToDateTime(row["GRNDate"]) : (DateTime?)null;
+                        DateTime? grnDate = row["GRNDate"] != DBNull.Value
+                            ? Convert.ToDateTime(row["GRNDate"])
+                            : (DateTime?)null;
 
-                        if (from.HasValue && grnDate < from) continue;
-                        if (to.HasValue && grnDate > to) continue;
+                        // ✅ Compare only date part, ignore time
+                        if (from.HasValue && grnDate.HasValue && grnDate.Value.Date < from.Value.Date) continue;
+                        if (to.HasValue && grnDate.HasValue && grnDate.Value.Date > to.Value.Date) continue;
 
                         grnList.Add(new GRN
                         {
@@ -1089,6 +1283,7 @@ namespace P2PERP.Controllers
                 return Json(new { data = new List<GRN>(), error = ex.Message }, JsonRequestBehavior.AllowGet);
             }
         }
+
 
 
 
@@ -1160,6 +1355,9 @@ namespace P2PERP.Controllers
                         ViewBag.CompanyAddress = row["CompanyAddress"].ToString();
                         ViewBag.BillingAddress = row["BillingAddress"].ToString();
                         ViewBag.GRNCode = row["NewGRNCode"].ToString();
+                        ViewBag.WarehouseName = row["WarehouseName"].ToString();
+                        ViewBag.WareHouseId = row["WareHouseId"].ToString();
+
                     }
                 }
 
@@ -1204,42 +1402,8 @@ namespace P2PERP.Controllers
 
 
 
-        // Loads the view GRN modal with header details
-        [HttpGet]
-        public async Task<ActionResult> ViewGRNSSG(string GRNCode)
-        {
-            try
-            {
-                GRN objGRN = new GRN { GRNCode = GRNCode };
-                var dsHeader = await bal.ViewGRNSSG(objGRN);
+       
 
-                if (dsHeader?.Tables.Count > 0 && dsHeader.Tables[0].Rows.Count > 0)
-                {
-                    var row = dsHeader.Tables[0].Rows[0];
-                    ViewBag.GRNCode = row["GRNCode"].ToString();
-                    ViewBag.POCode = row["POCode"].ToString();
-                    ViewBag.PODate = row["PODate"] != DBNull.Value
-                        ? Convert.ToDateTime(row["PODate"]).ToString("yyyy-MM-dd") : "";
-                    ViewBag.VendorName = row["VenderName"].ToString();
-                    ViewBag.InvoiceNo = row["InvoiceNo"].ToString();
-                    ViewBag.InvoiceDate = row["GRNDate"] != DBNull.Value
-                        ? Convert.ToDateTime(row["GRNDate"]).ToString("yyyy-MM-dd") : "";
-                    ViewBag.CompanyAddress = row["CompanyAddress"].ToString();
-                    ViewBag.BillingAddress = row["BillingAddress"].ToString();
-                    ViewBag.DiscountPercent = row.Table.Columns.Contains("DiscountPercent") && row["DiscountPercent"] != DBNull.Value
-                                                  ? Convert.ToDecimal(row["DiscountPercent"]) : 0;
-                    ViewBag.TotalAmount = row.Table.Columns.Contains("Amount") && row["Amount"] != DBNull.Value
-                                               ? Convert.ToDecimal(row["Amount"]) : 0;
-                }
-
-                ViewBag.Mode = "View";
-                return PartialView("_ViewGRNSSG");
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Error fetching GRN header: " + ex.Message, ex);
-            }
-        }
 
         // Fetches GRN items for display in view
         [HttpGet]
@@ -1283,6 +1447,382 @@ namespace P2PERP.Controllers
                 return Json(new { success = false, message = ex.Message, items = new List<object>() }, JsonRequestBehavior.AllowGet);
             }
         }
+
+
+
+
+        // Loads the view GRN modal with header details
+        [HttpGet]
+        public async Task<ActionResult> ViewGRNSSG(string GRNCode)
+        {
+            try
+            {
+                GRN objGRN = new GRN { GRNCode = GRNCode };
+                var dsHeader = await bal.ViewGRNSSG(objGRN);
+
+                if (dsHeader?.Tables.Count > 0 && dsHeader.Tables[0].Rows.Count > 0)
+                {
+                    var row = dsHeader.Tables[0].Rows[0];
+
+                    ViewBag.GRNCode = row["GRNCode"].ToString();
+                    ViewBag.POCode = row["POCode"].ToString();
+
+                    ViewBag.PODate = row["PODate"] != DBNull.Value
+                        ? Convert.ToDateTime(row["PODate"]).ToString("dd-MM-yyyy") : "";
+                    ViewBag.GRNDate = row["GRNDate"] != DBNull.Value
+                        ? Convert.ToDateTime(row["GRNDate"]).ToString("dd-MM-yyyy") : "";
+                    ViewBag.InvoiceNo = row["InvoiceNo"].ToString();
+                    ViewBag.InvoiceDate = row["InvoiceDate"] != DBNull.Value
+                        ? Convert.ToDateTime(row["InvoiceDate"]).ToString("dd-MM-yyyy") : "";
+                    ViewBag.VendorName = row["VenderName"].ToString();
+                    ViewBag.CompanyAddress = row["CompanyAddress"].ToString();
+                    ViewBag.BillingAddress = row["BillingAddress"].ToString();
+                    ViewBag.ReceivedBy = row.Table.Columns.Contains("ReceivedBy") && row["ReceivedBy"] != DBNull.Value
+                        ? row["ReceivedBy"].ToString()
+                        : "";
+                    ViewBag.DiscountPercent = row.Table.Columns.Contains("DiscountPercent") && row["DiscountPercent"] != DBNull.Value
+                        ? Convert.ToDecimal(row["DiscountPercent"]) : 0;
+                    ViewBag.TotalAmount = row.Table.Columns.Contains("Amount") && row["Amount"] != DBNull.Value
+                        ? Convert.ToDecimal(row["Amount"]) : 0;
+                    ViewBag.ShippingCharges = row.Table.Columns.Contains("ShippingCharges") && row["ShippingCharges"] != DBNull.Value
+                        ? Convert.ToDecimal(row["ShippingCharges"]) : 0;
+                }
+
+                ViewBag.Mode = "View";
+                return PartialView("_ViewGRNSSG");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error fetching GRN header: " + ex.Message, ex);
+            }
+        }
+
+        private class PdfWatermarkEvent : PdfPageEventHelper
+        {
+            private readonly iTextSharp.text.Image _img;
+            private readonly float _opacity;
+            private readonly float _angleDegrees;
+
+            public PdfWatermarkEvent(string imagePath, float opacity = 0.12f, float angleDegrees = 40f)
+            {
+                _opacity = opacity;
+                _angleDegrees = angleDegrees;
+
+                if (!string.IsNullOrEmpty(imagePath) && System.IO.File.Exists(imagePath))
+                {
+                    _img = iTextSharp.text.Image.GetInstance(imagePath);
+                    _img.Alignment = Element.ALIGN_CENTER;
+                }
+            }
+
+            public override void OnEndPage(PdfWriter writer, Document document)
+            {
+                if (_img == null) return;
+
+                PdfContentByte under = writer.DirectContent;
+                PdfGState gs = new PdfGState
+                {
+                    FillOpacity = _opacity,
+                    StrokeOpacity = _opacity
+                };
+
+                under.SaveState();
+                under.SetGState(gs);
+
+                Rectangle page = document.PageSize;
+
+                float maxDim = Math.Max(page.Width, page.Height) * 0.9f;
+                _img.ScaleToFit(maxDim, maxDim);
+
+                float centerX = page.Width / 2f;
+                float centerY = page.Height / 2f;
+
+                float angleRad = (float)(_angleDegrees * Math.PI / 180);
+                float cos = (float)Math.Cos(angleRad);
+                float sin = (float)Math.Sin(angleRad);
+
+                under.ConcatCTM(cos, sin, -sin, cos, centerX, centerY);
+
+                _img.SetAbsolutePosition(
+                    -_img.ScaledWidth / 2f,
+                    -_img.ScaledHeight / 2f
+                );
+
+                under.AddImage(_img);
+                under.RestoreState();
+            }
+        }
+
+
+
+
+        [HttpGet]
+        public async Task<ActionResult> GenerateGRNPDF(string GRNCode)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(GRNCode))
+                    return new HttpStatusCodeResult(400, "GRNCode is required");
+
+                GRN objGRN = new GRN { GRNCode = GRNCode };
+                var dsHeader = await bal.ViewGRNSSG(objGRN);
+                var dsItems = await bal.ViewGRNItemSSG(objGRN);
+
+                if (dsHeader?.Tables.Count == 0 || dsHeader.Tables[0].Rows.Count == 0)
+                    return new HttpStatusCodeResult(404, "GRN not found");
+
+                var row = dsHeader.Tables[0].Rows[0];
+
+                string poNo = row["POCode"].ToString();
+                string grnNo = row["GRNCode"].ToString();
+                string vendor = row.Table.Columns.Contains("VenderName") ? row["VenderName"].ToString() : "";
+                string invoiceNo = row["InvoiceNo"].ToString();
+                string invoiceDate = row["InvoiceDate"] != DBNull.Value ? Convert.ToDateTime(row["InvoiceDate"]).ToString("dd-MM-yyyy") : "";
+                string grnDate = row["GRNDate"] != DBNull.Value ? Convert.ToDateTime(row["GRNDate"]).ToString("dd-MM-yyyy") : "";
+                string poDate = row["PODate"] != DBNull.Value ? Convert.ToDateTime(row["PODate"]).ToString("dd-MM-yyyy") : "";
+                string companyAddr = row["CompanyAddress"].ToString();
+                string billingAddr = row["BillingAddress"].ToString();
+                string receivedBy = row["ReceivedBy"].ToString();
+                string warehouseName = row.Table.Columns.Contains("WarehouseName") ? row["WarehouseName"].ToString() : "Main Warehouse";
+
+                decimal subtotal = 0, shipping = 0, grandTotal = 0;
+                if (dsItems != null && dsItems.Tables[0].Rows.Count > 0)
+                {
+                    foreach (DataRow dr in dsItems.Tables[0].Rows)
+                        subtotal += dr["Amount"] != DBNull.Value ? Convert.ToDecimal(dr["Amount"]) : 0;
+                }
+
+                shipping = row.Table.Columns.Contains("ShippingCharges") && row["ShippingCharges"] != DBNull.Value
+                    ? Convert.ToDecimal(row["ShippingCharges"]) : 0;
+
+                grandTotal = subtotal + shipping;
+
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    Document doc = new Document(PageSize.A4, 36f, 36f, 24f, 36f);
+                    PdfWriter writer = PdfWriter.GetInstance(doc, ms);
+
+                    // Resolve logo path
+                    string watermarkPath;
+                    try
+                    {
+                        watermarkPath = Server.MapPath("~/Content/images/Watermark.png");
+                    }
+                    catch
+                    {
+                        watermarkPath = System.Web.Hosting.HostingEnvironment
+                            .MapPath("~/Content/images/Watermark.png");
+                    }
+
+                    // Attach watermark event
+                    writer.PageEvent = new PdfWatermarkEvent(
+                        watermarkPath,
+                        opacity: 0.12f,
+                       angleDegrees: 40f
+                    );
+
+                    doc.Open();
+
+
+                    BaseColor softBlue = new BaseColor(232, 240, 254);
+                    BaseColor headerBlue = new BaseColor(44, 88, 180);
+                    BaseColor sectionBlue = new BaseColor(35, 76, 150);
+                    BaseColor borderGray = new BaseColor(210, 210, 210);
+                    BaseColor tableHeader = new BaseColor(52, 73, 94);
+
+                    string fontsPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.Fonts),
+                        "arial.ttf"
+                    );
+
+                    BaseFont bf = BaseFont.CreateFont(fontsPath, BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
+
+                    Font titleFont = new Font(bf, 15, Font.BOLD) { Color = headerBlue };
+                    Font sectionFont = new Font(bf, 10, Font.BOLD) { Color = sectionBlue };
+
+                    Font labelFont = new Font(bf, 9, Font.NORMAL) { Color = new BaseColor(45, 45, 45) };
+                    Font valueFont = new Font(bf, 9, Font.NORMAL) { Color = new BaseColor(60, 60, 60) };
+                    Font textFont = new Font(bf, 9, Font.NORMAL) { Color = BaseColor.BLACK };
+
+                    Font tableHeaderFont = new Font(bf, 9, Font.NORMAL) { Color = BaseColor.WHITE };
+
+                    Font grnFont = new Font(bf, 10, Font.NORMAL) { Color = headerBlue };
+
+                    doc.Add(new Paragraph("GOODS RECEIPT NOTE (GRN)", titleFont)
+                    {
+                        Alignment = Element.ALIGN_CENTER,
+                        SpacingAfter = 4f
+                    });
+
+                    doc.Add(new Paragraph("GRN No: " + grnNo, grnFont)
+                    {
+                        Alignment = Element.ALIGN_CENTER,
+                        SpacingAfter = 12f
+                    });
+
+                    Paragraph poHeader = new Paragraph("PO DETAILS", sectionFont)
+                    {
+                        SpacingBefore = 6f,
+                        SpacingAfter = 4f
+                    };
+                    doc.Add(poHeader);
+
+                    PdfPTable poTbl = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 10f };
+                    poTbl.SetWidths(new float[] { 1.2f, 2f, 1.2f, 2f });
+
+                    void AddPOCell(string label, string value)
+                    {
+                        poTbl.AddCell(new PdfPCell(new Phrase(label, labelFont))
+                        {
+                            BackgroundColor = softBlue,
+                            Padding = 6,
+                            BorderColor = borderGray,
+                            VerticalAlignment = Element.ALIGN_MIDDLE
+                        });
+                        poTbl.AddCell(new PdfPCell(new Phrase(value, valueFont))
+                        {
+                            Padding = 6,
+                            BorderColor = borderGray,
+                            VerticalAlignment = Element.ALIGN_MIDDLE
+                        });
+                    }
+
+                    AddPOCell("PO No", poNo);
+                    AddPOCell("PO Date", poDate);
+                    AddPOCell("Company Address", companyAddr);
+                    AddPOCell("Billing Address", billingAddr);
+                    AddPOCell("Vendor Name", vendor);
+                    AddPOCell("", "");
+                    doc.Add(poTbl);
+
+                    Paragraph grnHeader = new Paragraph("GRN DETAILS", sectionFont)
+                    {
+                        SpacingBefore = 6f,
+                        SpacingAfter = 4f
+                    };
+                    doc.Add(grnHeader);
+
+                    PdfPTable grnTbl = new PdfPTable(4) { WidthPercentage = 100, SpacingAfter = 10f };
+                    grnTbl.SetWidths(new float[] { 1.2f, 2f, 1.2f, 2f });
+
+                    void AddGRNCell(string label, string value)
+                    {
+                        grnTbl.AddCell(new PdfPCell(new Phrase(label, labelFont))
+                        {
+                            BackgroundColor = softBlue,
+                            Padding = 6,
+                            BorderColor = borderGray,
+                            VerticalAlignment = Element.ALIGN_MIDDLE
+                        });
+                        grnTbl.AddCell(new PdfPCell(new Phrase(value, valueFont))
+                        {
+                            Padding = 6,
+                            BorderColor = borderGray,
+                            VerticalAlignment = Element.ALIGN_MIDDLE
+                        });
+                    }
+
+                    AddGRNCell("GRN No", grnNo);
+                    AddGRNCell("GRN Date", grnDate);
+                    AddGRNCell("Invoice No", invoiceNo);
+                    AddGRNCell("Invoice Date", invoiceDate);
+                    AddGRNCell("Received By", receivedBy);
+                    AddGRNCell("Warehouse", warehouseName);
+                    doc.Add(grnTbl);
+
+                    Paragraph itemHeader = new Paragraph("GRN ITEM DETAILS", sectionFont)
+                    {
+                        SpacingBefore = 6f,
+                        SpacingAfter = 4f
+                    };
+                    doc.Add(itemHeader);
+
+                    PdfPTable itemTbl = new PdfPTable(10) { WidthPercentage = 100, SpacingAfter = 10f };
+                    itemTbl.SetWidths(new float[] { 0.7f, 1.5f, 0.9f, 2f, 1f, 1f, 1.4f, 1f, 1.2f, 1.7f });
+
+                    string[] headers = {
+                "Sr.No","Item Name","UOM","Description",
+                "PO Qty","GRN Qty","Rate(₹)","GST (%)","Discount(%)","Amount(₹)"
+            };
+
+                    foreach (string h in headers)
+                    {
+                        itemTbl.AddCell(new PdfPCell(new Phrase(h, tableHeaderFont))
+                        {
+                            BackgroundColor = tableHeader,
+                            HorizontalAlignment = Element.ALIGN_CENTER,
+                            Padding = 6,
+                            BorderColor = borderGray
+                        });
+                    }
+
+                    if (dsItems != null && dsItems.Tables[0].Rows.Count > 0)
+                    {
+                        int i = 1;
+                        foreach (DataRow dr in dsItems.Tables[0].Rows)
+                        {
+                            BaseColor bg = (i % 2 == 0) ? new BaseColor(248, 248, 248) : BaseColor.WHITE;
+
+                            string rate = dr["UnitRate"] != DBNull.Value ? "₹ " + Convert.ToDecimal(dr["UnitRate"]).ToString("N2") : "₹ 0.00";
+                            string amount = dr["Amount"] != DBNull.Value ? "₹ " + Convert.ToDecimal(dr["Amount"]).ToString("N2") : "₹ 0.00";
+                            string discount = dr["Discount"] != DBNull.Value ? dr["Discount"] + " %" : "0 %";
+                            string gst = dr.Table.Columns.Contains("GST") && dr["GST"] != DBNull.Value ? dr["GST"].ToString() : "0%";
+                            string uom = dr.Table.Columns.Contains("UOMName") ? dr["UOMName"].ToString() : "";
+
+                            itemTbl.AddCell(new PdfPCell(new Phrase(i.ToString(), textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_CENTER });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(dr["ItemName"].ToString(), textFont)) { BackgroundColor = bg, Padding = 6 });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(uom, textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_CENTER });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(dr["Description"].ToString(), textFont)) { BackgroundColor = bg, Padding = 6 });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(dr["POQuantity"].ToString(), textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_CENTER });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(dr["GRNQuantity"].ToString(), textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_CENTER });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(rate, textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_RIGHT });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(gst, textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_CENTER });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(discount, textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_CENTER });
+                            itemTbl.AddCell(new PdfPCell(new Phrase(amount, textFont)) { BackgroundColor = bg, Padding = 6, HorizontalAlignment = Element.ALIGN_RIGHT });
+
+                            i++;
+                        }
+                    }
+
+                    doc.Add(itemTbl);
+
+                    PdfPTable totalTbl = new PdfPTable(2) { WidthPercentage = 40, HorizontalAlignment = Element.ALIGN_RIGHT };
+                    totalTbl.SetWidths(new float[] { 1f, 1f });
+
+                    void AddTotalRow(string label, decimal value, bool highlight = false)
+                    {
+                        totalTbl.AddCell(new PdfPCell(new Phrase(label, highlight ? labelFont : textFont))
+                        {
+                            BackgroundColor = highlight ? softBlue : BaseColor.WHITE,
+                            Padding = 6,
+                            BorderColor = borderGray
+                        });
+                        totalTbl.AddCell(new PdfPCell(new Phrase("₹ " + value.ToString("N2"), highlight ? labelFont : textFont))
+                        {
+                            BackgroundColor = highlight ? softBlue : BaseColor.WHITE,
+                            Padding = 6,
+                            BorderColor = borderGray,
+                            HorizontalAlignment = Element.ALIGN_RIGHT
+                        });
+                    }
+
+                    AddTotalRow("Subtotal", subtotal);
+                    AddTotalRow("Shipping Charges", shipping);
+                    AddTotalRow("Grand Total", grandTotal, true);
+
+                    doc.Add(totalTbl);
+                    doc.Close();
+
+                    return File(ms.ToArray(), "application/pdf");
+                }
+            }
+            catch (Exception ex)
+            {
+                return new HttpStatusCodeResult(500, "Error generating GRN PDF: " + ex.Message);
+            }
+        }
+
+
 
         // Fetch list of warehouses asynchronously
         [HttpGet]
@@ -1358,8 +1898,13 @@ namespace P2PERP.Controllers
         {
             try
             {
+                // Get staff code from session
+                var staffcode = Session["StaffCode"] as string;
+                if (string.IsNullOrEmpty(staffcode))
+                    return Json(new { success = false, message = "Staff code not found in session. Please login again." });
+
                 if (string.IsNullOrEmpty(GRNCode) || GRNItemCodes == null || !GRNItemCodes.Any())
-                    return Json(new { success = false, message = "GRNCode and items required" });
+                    return Json(new { success = false, message = "GRNCode and items are required." });
 
                 int insertedCount = 0;
 
@@ -1370,7 +1915,9 @@ namespace P2PERP.Controllers
                         GRNCode = GRNCode,
                         GRNItemCode = itemCode
                     };
-                    insertedCount += await bal.AssignQCSSG(objGRN);
+
+                    // Pass staffcode to BAL method
+                    insertedCount += await bal.AssignQCSSG(objGRN, staffcode);
                 }
 
                 return Json(new
@@ -1386,6 +1933,7 @@ namespace P2PERP.Controllers
                 return Json(new { success = false, message = "Error assigning QC: " + ex.Message });
             }
         }
+
 
 
 

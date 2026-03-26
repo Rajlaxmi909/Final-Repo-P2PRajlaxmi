@@ -1,10 +1,22 @@
 ﻿@{
-    ViewBag.Title = "ShowAllRFQsVNK";
+    ViewBag.Title = "Show All RFQs";
 }
 
 <html>
 <head>
     <style>
+
+        button.dt-button.processing,
+        div.dt-button.processing {
+            pointer-events: auto !important;
+            opacity: 1 !important;
+            background: none !important;
+        }
+
+            button.dt-button.processing:after {
+                content: none !important;
+            }
+
         .card-header-small {
             padding: 0.25rem 1rem;
             font-size: 1.8rem;
@@ -31,6 +43,10 @@
         .modal-wide .modal-dialog {
             max-width: 1200px;
             margin-top: 80px;
+        }
+
+        #tblRFQ thead th {
+            white-space: nowrap !important;
         }
 
 
@@ -106,6 +122,98 @@
         .modal-dialog {
             margin-top: 140px;
         }
+
+         .form-control, .form-select {
+        border-radius: 0.5rem;
+        border: 1px solid #ced4da;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+        border-color: #86b7fe;
+    }
+
+    .btn {
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card {
+        border: none;
+    }
+
+    .table th {
+        border-top: none;
+        font-weight: 600;
+    }
+
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .table td, .table th {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.78rem;
+        vertical-align: middle;
+
+    }
+
+    .btn-delete {
+        padding: 2px 6px !important;
+        font-size: 0.70rem !important;
+    }
+
+        .btn-delete i {
+            font-size: 0.75rem !important;
+        }
+
+
+    @@media (max-width: 768px) {
+        .form-control, .form-select, .btn, .table td, .table th {
+            font-size: 0.85rem;
+        }
+    }
+
+        .dt-toolbar {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        div.dt-buttons {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        .ms-3 {
+            margin-bottom: 0.1rem !important; 
+        }
+
+        .dt-toolbar {
+            margin-bottom: 8px !important; 
+        }
+
+        div.dt-buttons {
+            margin-bottom: 8px !important;
+        }
+
+        .dataTables_filter {
+            margin-bottom: 8px !important;
+        }
+
+        .hidcoln{
+            display:none;
+        }
+
+
     </style>
 
 </head>
@@ -115,10 +223,24 @@
             <div class="card shadow-sm rounded">
 
                 <div class="text-center mb-3 mt-2">
-                    <h2 class="text-primary fw-bold">
+                    <h3 class="text-primary fw-bold">
                         Register Quotations
-                    </h2>
+                    </h3>
                 </div>
+
+                @*date picker*@
+
+                <div class="mb-3 ms-3 d-flex align-items-center gap-2 ms-5">
+                    <div class="input-group" style="max-width: 280px;">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="bi bi-calendar-date"></i>
+                        </span>
+                        <input type="text" id="RFQDatepicker" class="form-control" placeholder="Select date range" readonly />
+                    </div>
+                </div>
+
+
+                @*Table*@
                 <div class="card-body">
                     <table class="table table-striped table-hover table-bordered align-middle" id="tblRFQ">
                         <thead class="table-dark">
@@ -127,6 +249,7 @@
                                 <th>Sr No</th>
                                 <th>RFQ Code</th>
                                 <th>Added Date</th>
+                                <th class="hidcoln">ExpDate</th>
                                 <th>Added By</th>
                                 <th>Description</th>
                                 <th>Action</th>
@@ -142,8 +265,8 @@
     <div class="modal fade" id="rfqModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white justify-content-center">
-                    <h5 class="modal-title fw-bold text-white mb-0">Quotation List</h5>
+                <div class="card-header bg-primary text-white d-flex justify-content-center align-items-center rounded-top p-1">
+                    <h3 class="modal-title fw-bold text-white mb-0 fs-5">Quotation List</h3>
                     <button type="button" class="btn-close btn-close-white position-absolute end-0 me-3" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="rfqModalContent"></div>
@@ -157,21 +280,19 @@
         $(document).ready(function () {
             // Initialize tooltips
             $('[data-bs-toggle="tooltip"]').tooltip();
+            const today = new Date();
 
 
             function formatDateOnly(dateValue) {
                 if (!dateValue) return "";
 
-                // Try parsing with moment if available
                 if (moment(dateValue, ["YYYY-MM-DD", "YYYY/MM/DD", "DD-MM-YYYY", "DD/MM/YYYY"], true).isValid()) {
                     return moment(dateValue).format("DD/MM/YYYY");
                 }
 
-                // Fallback: handle manually if not detected by moment
-                let datePart = dateValue.split(' ')[0].replace(/-/g, '/'); // normalize - and /
+                let datePart = dateValue.split(' ')[0].replace(/-/g, '/'); 
                 let parts = datePart.split('/');
                 if (parts.length === 3) {
-                    // Check if first part is year
                     if (parts[0].length === 4) {
                         return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
                     } else {
@@ -179,8 +300,45 @@
                     }
                 }
 
-                return dateValue; // if nothing works
+                return dateValue;
             }
+
+
+            // Date filter for RFQs
+            $(document).on('focus', '#RFQDatepicker', function () {
+                if (!$(this).data('daterangepicker')) {
+                    $(this).daterangepicker({
+                        autoUpdateInput: false,
+                        opens: "center",
+                        drops: "down",
+                        alwaysShowCalendars: false,
+                        locale: { cancelLabel: 'Clear' },
+                        ranges: {
+                            'Today': [moment(), moment()],
+                            'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                            'Last 1 Month': [moment().subtract(1, 'month'), moment()],
+                            'Last 3 Months': [moment().subtract(3, 'month'), moment()],
+                            'Last 1 Year': [moment().subtract(1, 'year'), moment()]
+                        }
+                    }, function (start, end) {
+                        $('#RFQDatepicker').val(start.format('DD/MM/YYYY') + ' - ' + end.format('DD/MM/YYYY'));
+
+                        // Add filter to DataTable
+                        $.fn.dataTable.ext.search.push(function (settings, data) {
+                            if (settings.nTable.id !== 'tblRFQ') return true;
+                            const addedDate = moment(data[3], 'DD/MM/YYYY');
+                            return addedDate.isBetween(start, end, undefined, '[]');
+                        });
+                        if (rfqTable) rfqTable.draw();
+                        $.fn.dataTable.ext.search.pop();
+                    });
+
+                    $('#RFQDatepicker').on('cancel.daterangepicker', function () {
+                        $(this).val('');
+                        if (rfqTable) rfqTable.draw();
+                    });
+                }
+            });
 
 
 
@@ -204,6 +362,7 @@
 
             //search
             let rfqTable = $('#tblRFQ').DataTable({
+
                 dom: '<"dt-toolbar"<"dt-left"B><"dt-search"f>>rt<"bottom d-flex justify-content-between align-items-center"ip>',
                 buttons: [
 
@@ -229,29 +388,29 @@
                             const formattedDate = today.toLocaleDateString('en-GB');
 
                             $(win.document.body).prepend(`
-                    <div style="text-align:center; font-size:18px; font-weight:bold; margin-bottom:5px;">Register Quotations</div>
-                    <div style="text-align:center; font-size:12px; margin-bottom:10px;">Exported Date: ${formattedDate}</div>
-                `);
+                            <div style="text-align:center; font-size:18px; font-weight:bold; margin-bottom:5px;">Register Quotations</div>
+                            <div style="text-align:center; font-size:12px; margin-bottom:10px;">Generated Date: ${formattedDate}</div>
+                        `);
 
                             $(win.document.body).append(`
-                    <style>
-                        thead th {
-                            background-color: black !important;
-                            color: white !important;
-                            text-align: center !important;
-                            -webkit-print-color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                        }
-                        table {
-                            border-collapse: collapse !important;
-                            width: 100% !important;
-                        }
-                        td, th {
-                            border: 1px solid #000 !important;
-                            padding: 6px !important;
-                        }
-                    </style>
-                `);
+                            <style>
+                                thead th {
+                                    background-color: black !important;
+                                    color: white !important;
+                                    text-align: center !important;
+                                    -webkit-print-color-adjust: exact !important;
+                                    print-color-adjust: exact !important;
+                                }
+                                table {
+                                    border-collapse: collapse !important;
+                                    width: 100% !important;
+                                }
+                                td, th {
+                                    border: 1px solid #000 !important;
+                                    padding: 6px !important;
+                                }
+                            </style>
+                        `);
 
                             $(win.document.body).find('table')
                                 .addClass('table table-bordered table-striped')
@@ -278,7 +437,7 @@
                         },
                         customize: function (doc) {
                             doc.content[0].alignment = 'center'; doc.content[0].fontSize = 14;
-                            doc.content.splice(1, 0, { text: 'Exported Date: ' + new Date().toLocaleDateString('en-GB'), alignment: 'center', margin: [0, 0, 0, 8], fontSize: 10 });
+                            doc.content.splice(1, 0, { text: 'Generated Date: ' + new Date().toLocaleDateString('en-GB'), alignment: 'center', margin: [0, 0, 0, 8], fontSize: 10 });
                             var tableNode = doc.content.find(c => c.table); if (!tableNode) return;
                             doc.styles.tableHeader = { alignment: 'center', fillColor: '#212529', color: '#ffffff', bold: true };
                             tableNode.table.body.forEach((row, i) => { if (i > 0) row[0] = { text: String(i), alignment: 'center' }; });
@@ -286,11 +445,12 @@
                         }
                     },
 
+
                     // Excel
                     {
                         extend: 'excelHtml5',
                         title: '',
-                        filename: 'Registered Quotations',
+                        filename: 'Registered_Quotations',
                         text: '<i class="bi bi-file-earmark-excel text-success fs-5"></i>',
                         titleAttr: 'Export Excel',
                         action: function (e, dt, button, config) {
@@ -313,47 +473,98 @@
                         },
                         customize: function (xlsx) {
                             var sheet = xlsx.xl.worksheets['sheet1.xml'];
-                            const today = new Date();
-                            const dateStr = today.toLocaleDateString('en-GB');
+                            var $sheet = $(sheet);
 
-                            $(sheet).find('row').each(function () {
+                            // Count columns
+                            var colCount = $('row:first c', sheet).length;
+                            if (colCount === 0) colCount = 6;
+                            var lastCol = String.fromCharCode(64 + colCount);
+
+                            // Shift all rows down by 2
+                            $sheet.find('sheetData row').each(function () {
                                 var r = parseInt($(this).attr('r'));
                                 $(this).attr('r', r + 2);
                                 $(this).find('c').each(function () {
                                     var cellRef = $(this).attr('r');
-                                    var col = cellRef.replace(/\d+/g, '');
-                                    var row = parseInt(cellRef.replace(/\D/g, '')) + 2;
+                                    var col = cellRef.replace(/[0-9]/g, '');
+                                    var row = parseInt(cellRef.replace(/[A-Z]/g, '')) + 2;
                                     $(this).attr('r', col + row);
                                 });
                             });
 
-                            var titleRow = `<row r="1">
-                    <c t="inlineStr" r="A1" s="2">
-                        <is><t>Registered Quotations</t></is>
-                    </c>
-                </row>`;
+                            // Title and date
+                            var title = 'Registered Quotations';
+                            var generatedDate = 'Generated Date: ' + moment().format('DD/MM/YYYY');
 
-                            var dateRow = `<row r="2">
-                    <c t="inlineStr" r="A2" s="2">
-                        <is><t>Export Date: ${dateStr}</t></is>
-                    </c>
-                </row>`;
+                            var titleRow = `
+<row r="1">
+        <c t="inlineStr" r="A1" s="55">
+            <is><t>${title}</t></is>
+        </c>
+</row>`;
+                            var dateRow = `
+<row r="2">
+        <c t="inlineStr" r="A2" s="56">
+            <is><t>${generatedDate}</t></is>
+        </c>
+</row>`;
 
-                            sheet.childNodes[0].childNodes[1].innerHTML = titleRow + dateRow + sheet.childNodes[0].childNodes[1].innerHTML;
+                            $sheet.find('sheetData').prepend(titleRow + dateRow);
+
+                            // Merge title and date cells across all columns
+                            var mergeCells = $sheet.find('mergeCells');
+                            if (mergeCells.length === 0) {
+                                mergeCells = $('<mergeCells count="0"></mergeCells>');
+                                $sheet.append(mergeCells);
+                            }
+                            mergeCells.append(`<mergeCell ref="A1:${lastCol}1"/>`);
+                            mergeCells.append(`<mergeCell ref="A2:${lastCol}2"/>`);
+                            mergeCells.attr('count', mergeCells.find('mergeCell').length);
+
+                            // Add center alignment styles
+                            var styles = xlsx.xl['styles.xml'];
+                            var $styles = $(styles);
+                            var cellXfs = $styles.find('cellXfs');
+                            var count = parseInt(cellXfs.attr('count'));
+                            var newStyleIndex1 = count;      // for title
+                            var newStyleIndex2 = count + 1;  // for date
+
+                            // Create new centered style entries
+                            cellXfs.append(`
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1">
+        <alignment horizontal="center" vertical="center"/>
+</xf>`);
+                            cellXfs.append(`
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1">
+        <alignment horizontal="center" vertical="center"/>
+</xf>`);
+                            cellXfs.attr('count', count + 2);
+
+                            // Apply centered style to A1 and A2
+                            $sheet.find('c[r="A1"]').attr('s', newStyleIndex1);
+                            $sheet.find('c[r="A2"]').attr('s', newStyleIndex2);
                         }
                     },
 
-                    // CSV
+
+                    //  CSV Export for RFQ Table
                     {
                         extend: 'csvHtml5',
                         text: '<i class="bi bi-filetype-csv text-success fs-5"></i>',
                         titleAttr: 'Export to CSV',
+                        attr: {
+                            'data-bs-toggle': 'tooltip',
+                            'data-bs-placement': 'bottom',
+                            'title': 'Export to CSV'
+                        },
                         action: function (e, dt, button, config) {
                             if ($('#tblRFQ .row-select:checked').length === 0) {
                                 showToast("Please select at least one row to export!", "warning");
                                 return;
                             }
+
                             window.__srnoCounter = 0;
+
                             $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
                             dt.processing(false);
                         },
@@ -365,35 +576,38 @@
                                 return idx !== 0 && idx !== 6;
                             },
                             format: {
-                                body: function (data, row, column, node) {
-                                    data = typeof data === 'string' ? data.replace(/<[^>]*>/g, '').trim() : data;
+                                body: (function () {
+                                    return function (data, row, column, node) {
+                                        data = typeof data === 'string' ? data.replace(/<[^>]*>/g, '').trim() : data;
 
-                                    if (column === 1) {
-                                        if (!window.__srnoCounter) window.__srnoCounter = 0;
-                                        return ++window.__srnoCounter;
-                                    }
+                                        if (column === 1) {
+                                            if (!window.__srnoCounter) window.__srnoCounter = 0;
+                                            return ++window.__srnoCounter;
+                                        }
 
-                                    if (column === 3) {
-                                        if (moment(data, 'DD-MM-YYYY', true).isValid()) return moment(data, 'DD-MM-YYYY').format('DD-MM-YYYY');
-                                        if (moment(data).isValid()) return moment(data).format('DD-MM-YYYY');
+                                        if (column === 3) {
+                                            const m = moment(data, ["DD/MM/YYYY", "YYYY-MM-DD", "DD-MM-YYYY"], true);
+                                            if (m.isValid()) {
+                                                return m.format("DD/MM/YYYY");
+                                            }
+                                            return data;
+                                        }
+
                                         return data;
-                                    }
-
-                                    return data;
-                                }
+                                    };
+                                })()
                             }
                         },
-                        title: '',
+                        title: null,
                         filename: function () {
                             return 'RFQ_List_' + new Date().toISOString().slice(0, 10).replace(/-/g, "");
                         },
                         customize: function (csv) {
-                            const today = new Date();
-                            const dateStr = today.toLocaleDateString('en-GB');
-                            const header = `"All RFQs"\n"Export Date: ${dateStr}"\n`;
-                            return header + csv;
+                            const spaces = '          ';
+                            return spaces + '\n' + csv;
                         }
                     }
+
 
 
                 ],
@@ -401,42 +615,76 @@
                     $('#tblRFQ_filter input').addClass("form-control").attr("placeholder", "Search...").css("height", "40px");
                 },
                 processing: true,
+                ordering: false,
                 ajax: { url: '/Purchase/AllRFQVNK', type: 'GET', dataSrc: d => d },
                 columns: [
                     { data: null, orderable: false, className: "text-center", render: (d, t, r) => `<input type="checkbox" class="row-select" value="${r.RFQCode}" />` },
                     { data: null, className: "text-center", orderable: false, render: (d, t, r, meta) => meta.row + 1 },
                     { data: 'RFQCode' },
                     { data: 'AddedDateVK', render: (d) => formatDateOnly(d) },
+                    { data: 'ExpDate', render: (d) => formatDateOnly(d), visible: false },
+
                     { data: 'FullName' },
                     { data: 'Description', render: (d) => `<span data-bs-toggle="tooltip" title="${d}">${d}</span>` },
                     {
                         data: null, orderable: false,
                         render: function (row) {
+                            //console.log(row)
                             let registerBtn = '';
-                            if (row.HasUnregisteredVendors && Number(row.HasUnregisteredVendors) === 1) {
-                                registerBtn = `<a class="btn btn-sm btn-success ms-1"
-                        href="/Purchase/RegisterQuotationVNK?rfqCode=${encodeURIComponent(row.RFQCode)}&prCode=${encodeURIComponent(row.PRCode)}"
-                        title="Register Quotation" data-bs-toggle="tooltip">
-                        <i class="bi bi-file-earmark-plus-fill fs-5"></i>
-                    </a>`;
-                            }
+                            let viewBtn = '';
 
-                            let viewBtn = `<a href="javascript:void(0)"
-                    class="btn btn-sm btn-view  btn-icon-square btn-primary btn-view-quotation"
-                    data-rfq="${row.RFQCode}" data-pr="${row.PRCode}" data-unreg="${row.HasUnregisteredVendors}"
-                    data-bs-toggle="tooltip" title="View Quotation">
-                    <i class="bi bi-eye-fill"></i>
-                </a>`;
+                            const expDate = parseYMD(row.ExpDate);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+
+                            if (row.HasUnregisteredVendors && Number(row.HasUnregisteredVendors) === 1 && Number(row.HasApproved) == 0 && expDate > today) {
+                                registerBtn = `<a class="btn btn-sm btn-success fs-5 ms-1 square-pill d-inline-flex align-items-center px-2 py-1 shadow"
+                                        href="/Purchase/RegisterQuotationVNK?rfqCode=${encodeURIComponent(row.RFQCode)}&prCode=${encodeURIComponent(row.PRCode)}"
+                                        title="Register Quotation" data-bs-toggle="tooltip">
+                                        <i class="bi bi-file-earmark-plus-fill fs-5"></i>
+                                    </a>`;
+                            }
+                            if (row.AnyVendor && Number(row.AnyVendor) === 1) {
+                                viewBtn = `<a href="javascript:void(0)"
+                                    class="btn btn-sm btn-view fs-5 square-pill d-inline-flex align-items-center px-2 py-1 shadow  btn-icon-square btn-primary btn-view-quotation"
+                                    data-rfq="${row.RFQCode}" data-pr="${row.PRCode}" data-unreg="${row.HasUnregisteredVendors}"
+                                    data-bs-toggle="tooltip" title="View Quotation">
+                                    <i class="bi bi-eye-fill fs-5"></i>
+                                </a>`};
+
+                            if (!registerBtn && !viewBtn) {
+                                //return 'Closed';
+                                return '<span style="background:red;color:white;padding:3px 6px;border-radius:4px;">Closed</span>';
+
+                            }
 
                             return `<div class="d-flex justify-content-center align-items-center">${viewBtn}${registerBtn}</div>`;
                         }
+
                     }
+
                 ]
             });
+            function parseYMD(dateStr) {
+
+                if (!dateStr) return null;
+
+                // "30-01-2026 00:00:00"
+                const [datePart] = dateStr.split(' ');
+                const [d, m, y] = datePart.split('-').map(Number);
+
+                return new Date(y, m - 1, d);
+            }
 
             rfqTable.on('draw', function () { $('[data-bs-toggle="tooltip"]').tooltip(); });
 
             $(document).on("change", "#selectAll", function () { $(".row-select").prop("checked", this.checked); });
+            $(document).on("change", ".row-select", function () {
+                const total = $(".row-select").length;
+                const checked = $(".row-select:checked").length;
+                $("#selectAll").prop("checked", total > 0 && total === checked);
+            });
+
 
             // View Quotation in Modal
             $(document).on("click", ".btn-view-quotation", function () {

@@ -6,105 +6,118 @@ using System.Threading.Tasks;
 
 namespace P2PLibray.Inventory
 {
-        #region Rutik
-        // ---------------------- STOCK ----------------------
-        public class InventoryStock
-        {
-            public int TotalCount { get; set; }
-            public int LowInStocks { get; set; }
-            public int MostInStocks { get; set; }
-        }
+    #region Rutik
+    // ---------------------- STOCK ----------------------
+    public class InventoryStock
+    {
+        public int TotalCount { get; set; }
+        public int LowInStocks { get; set; }
+        public int MostInStocks { get; set; }
+    }
 
-        public class InventoryStorage
-        {
-            public int Bin { get; set; }
-            public int WareHouse { get; set; }
-            public int Rack { get; set; }
-        }
+    public class InventoryDashboardMetrics
+    {
+        public decimal NonMovingItemsValue { get; set; }
+        public decimal HighConsumptionItemsValue { get; set; }
+        public decimal InventoryValue { get; set; }
+        public decimal MaterialReceivedValue { get; set; }
+        public decimal MaterialIssuedValue { get; set; }
+    }
 
-        public class InventoryStockDetails
-        {
-            public int ItemsCounts { get; set; }
-            public int QuantityStored { get; set; }
-            public int ReorderQuantity { get; set; }
-            public string ItemCode { get; set; }
-            public string ItemName { get; set; }
-            public string BinCode { get; set; }
-            public string AddedDate { get; set; }
-            public string CreatedDate { get; set; }
-        }
+    public class InventoryStorage
+    {
+        public int Bin { get; set; }
+        public int WareHouse { get; set; }
+        public int Section { get; set; }
+        public int Rack { get; set; }
+    }
 
-        public class InventoryStockGrouped
-        {
-            public List<InventoryStockDetails> TotalStock { get; set; }
-            public List<InventoryStockDetails> LowStock { get; set; }
-            public List<InventoryStockDetails> MostStock { get; set; }
+    public class InventoryStockDetails
+    {
+        public int ItemsCounts { get; set; }
+        public int QuantityStored { get; set; }
+        public int ReorderQuantity { get; set; }
+        public string ItemCode { get; set; }
+        public string ItemName { get; set; }
+        public string BinCode { get; set; }
+        public string AddedDate { get; set; }
+        public string CreatedDate { get; set; }
+        public decimal TotalValue { get; set; }
+    }
 
-            public InventoryStockGrouped()
-            {
-                TotalStock = new List<InventoryStockDetails>();
-                LowStock = new List<InventoryStockDetails>();
-                MostStock = new List<InventoryStockDetails>();
-            }
-        }
+    public class InventoryStockGrouped
+    {
+        public List<InventoryStockDetails> TotalStock { get; set; }
+        public List<InventoryStockDetails> LowStock { get; set; }
+        public List<InventoryStockDetails> MostStock { get; set; }
 
-        // ---------------------- CATEGORY ----------------------
-        public class InventoryCategory
+        public InventoryStockGrouped()
         {
-            public int FinishedGoods { get; set; }
-            public int SemiFinishedGoods { get; set; }
-            public int RawMaterial { get; set; }
-            public int DeadStock { get; set; }
+            TotalStock = new List<InventoryStockDetails>();
+            LowStock = new List<InventoryStockDetails>();
+            MostStock = new List<InventoryStockDetails>();
         }
+    }
 
-        public class InventoryCategoryGrouped
-        {
-            public List<InventoryStockDetails> FinishedGoods { get; set; } = new List<InventoryStockDetails>();
-            public List<InventoryStockDetails> SemiFinishedGoods { get; set; } = new List<InventoryStockDetails>();
-            public List<InventoryStockDetails> RawMaterial { get; set; } = new List<InventoryStockDetails>();
-            public List<InventoryStockDetails> DeadStock { get; set; } = new List<InventoryStockDetails>();
-        }
+    // ---------------------- CATEGORY ----------------------
+    public class InventoryCategory
+    {
+        public int FinishedGoods { get; set; }
+        public int SemiFinishedGoods { get; set; }
+        public int RawMaterial { get; set; }
+        public int DeadStock { get; set; }
+    }
 
-        // ---------------------- RECEIVE ----------------------
-        public class ReceiveMaterialDetail
-        {
-            public string GRNItemCode { get; set; }
-            public string BinCode { get; set; }
-            public int ItemsCounts { get; set; }
-            public string ItemName { get; set; }
-            public string AddedDate { get; set; }
-        }
+    public class InventoryCategoryGrouped
+    {
+        public List<InventoryStockDetails> FinishedGoods { get; set; } = new List<InventoryStockDetails>();
+        public List<InventoryStockDetails> SemiFinishedGoods { get; set; } = new List<InventoryStockDetails>();
+        public List<InventoryStockDetails> RawMaterial { get; set; } = new List<InventoryStockDetails>();
+        public List<InventoryStockDetails> DeadStock { get; set; } = new List<InventoryStockDetails>();
+    }
 
-        public class ReciveItemsCountClass
-        {
-            public int Received { get; set; }
-            public int POQuantity { get; set; }
-            public string ReceiveDate { get; set; }
-            public string POCode { get; set; }
-        }
+    // ---------------------- RECEIVE ----------------------
+    public class ReceiveMaterialDetail
+    {
+        public string GRNItemCode { get; set; }
+        public string BinCode { get; set; }
+        public int ItemsCounts { get; set; }
+        public string ItemName { get; set; }
+        public string AddedDate { get; set; }
+    }
 
-        // ---------------------- ISSUE ----------------------
-        public class IssueInHouseDetail
-        {
-            public string BinCode { get; set; }
-            public int ItemsCounts { get; set; }
-            public string ItemName { get; set; }
-            public string AddedDate { get; set; }
-        }
+    public class ReciveItemsCountClass
+    {
+        public int Received { get; set; }
+        public int POQuantity { get; set; }
+        public string ReceiveDate { get; set; }
+        public string POCode { get; set; }
+    }
 
-        public class IssueInHouseCountClass
-        {
-            public int Issue { get; set; }
-            public string IssueMonth { get; set; }
-        }
+    // ---------------------- ISSUE ----------------------
+    public class IssueInHouseDetail
+    {
+        public string BinCode { get; set; }
+        public int ItemsCounts { get; set; }
+        public string ItemName { get; set; }
+        public string AddedDate { get; set; }
+        public decimal TotalValue { get; set; }
+    }
+
+    public class IssueInHouseCountClass
+    {
+        public int Issue { get; set; }
+        public string IssueMonth { get; set; }
+    }
     #endregion
     #region Divyani
     public class InventoryDRB
     {
         public string GRNCode { get; set; }
+        public string SupplierName { get; set; }
         public string AddedDate { get; set; }
 
-        public string StatusName { get; set; }
+        //public string StatusName { get; set; }
 
     }
 
@@ -212,10 +225,10 @@ namespace P2PLibray.Inventory
         public string MaxQuantity { get; set; }
     }
 
-    public class SaveItemBinAssignmentDRB
+    public class SaveItemBinAssignmentDRB : InventoryBinDRB
     {
         public string GRNItemCode { get; set; }
-        public string BinCode { get; set; }
+        //public string BinCode { get; set; }
         public string QuantityStored { get; set; }
         public string CreatedDate { get; set; }
 
@@ -240,6 +253,7 @@ namespace P2PLibray.Inventory
         public string Status { get; set; }
         public string ExpiryDate { get; set; }
         public string BinName { get; set; }
+        public string BinsList { get; set; }
         public string RowName { get; set; }
         public string RackName { get; set; }
         public int TransferQty { get; set; }
@@ -319,19 +333,64 @@ namespace P2PLibray.Inventory
     }
 
     #endregion
+
+    #region Mayur
+    public class InventoryMHB
+    {
+        public string ItemName { get; set; }
+        public string ItemCode { get; set; }
+        public string ReorderQuantity { get; set; }
+        public string minQuantity { get; set; }
+        public int MaxQuantity { get; set; }
+        public int CurrentItems { get; set; }
+        public string StockStatus { get; set; }
+
+
+        public string ItemId { get; set; }
+        public int Quantity { get; set; }
+        public string UOMName { get; set; }
+        //public string UOMNameMB { get; set; }
+        public string Description { get; set; }
+        public DateTime? RequiredDate { get; set; }
+
+
+        public string ISRQuantity { get; set; }
+        public string RequestType { get; set; }
+        public string StatusName { get; set; }
+
+
+        public string PlanName { get; set; }
+        public string Year { get; set; }
+        public string FromDate { get; set; }
+        public string ToDate { get; set; }
+        public List<InventoryMHB> Items { get; set; }
+
+        public string QuantityMRP { get; set; }
+
+        public string MRPCode { get; set; }
+
+        public List<InventoryMHB> ItemList { get; set; } = new List<InventoryMHB>();
+
+
+        public string RequiredDates { get; set; }
+
+        public string StaffCode { get; set; }
+
+    }
+    #endregion Mayur
     public class Inventory
     {
 
         #region Rushikesh
         public int StockRequirementId { get; set; }
-       // public string AddedDate { get; set; }
+        // public string AddedDate { get; set; }
         public string Status { get; set; }
 
         public string ItemCode { get; set; }
         public string ItemName { get; set; }
         public string Description { get; set; }
         public string RequiredQuantity { get; set; }
-        public string RequiredDate { get; set; }
+        public DateTime RequiredDate { get; set; }
         public string RequestType { get; set; }
 
         public string PlanName { get; set; }
@@ -374,7 +433,7 @@ namespace P2PLibray.Inventory
         public string AddedBy { get; set; }
         public string Phone { get; set; }
         public string Email { get; set; }
-    
+
         public string Descriptions { get; set; }
 
         public int Capacity { get; set; }
@@ -384,7 +443,7 @@ namespace P2PLibray.Inventory
         public string RackCodes { get; set; }
         public string RowName { get; set; }
         public string BinName { get; set; }
-      //  public string ItemName { get; set; }
+        //  public string ItemName { get; set; }
         public int MaxQuantity { get; set; }
         public int CurrentItems { get; set; }
 
@@ -398,46 +457,46 @@ namespace P2PLibray.Inventory
 
         #endregion
 
-        #region Mayur
-     //   public string ItemName { get; set; }
-     //   public string ItemCode { get; set; }
-        public string ReorderQuantity { get; set; }
-        public string minQuantity { get; set; }
-       // public string MaxQuantity { get; set; }
-      //  public string CurrentItems { get; set; }
-        public string StockStatus { get; set; }
+        //   #region Mayur
+        ////   public string ItemName { get; set; }
+        ////   public string ItemCode { get; set; }
+        //   public string ReorderQuantity { get; set; }
+        //   public string minQuantity { get; set; }
+        //  // public string MaxQuantity { get; set; }
+        // //  public string CurrentItems { get; set; }
+        //   public string StockStatus { get; set; }
 
 
-        public string ItemId { get; set; }
-        public int Quantity { get; set; }
-        public string UOMName { get; set; }
-      //  public string Description { get; set; }
-       // public DateTime? RequiredDate { get; set; }
+        //   public string ItemId { get; set; }
+        //   public int Quantity { get; set; }
+        //   public string UOMName { get; set; }
+        // //  public string Description { get; set; }
+        //  // public DateTime? RequiredDate { get; set; }
 
 
-        public string ISRQuantity { get; set; }
-       // public string RequestType { get; set; }
-        public string StatusName { get; set; }
+        //   public string ISRQuantity { get; set; }
+        //  // public string RequestType { get; set; }
+        //   public string StatusName { get; set; }
 
 
-        //public string PlanName { get; set; }
-        public string Year { get; set; }
-      //  public string FromDate { get; set; }
-          //public string ToDate { get; set; }
-        public List<Inventory> Items { get; set; }
+        //   //public string PlanName { get; set; }
+        //   public string Year { get; set; }
+        // //  public string FromDate { get; set; }
+        //     //public string ToDate { get; set; }
+        //   public List<Inventory> Items { get; set; }
 
-        public string QuantityMRP { get; set; }
+        //   public string QuantityMRP { get; set; }
 
-     //   public string MRPCode { get; set; }
+        ////   public string MRPCode { get; set; }
 
-        public List<Inventory> ItemList { get; set; } = new List<Inventory>();
+        //   public List<Inventory> ItemList { get; set; } = new List<Inventory>();
 
 
-        public string RequiredDates { get; set; }
+        //   public string RequiredDates { get; set; }
 
-        public string StaffCode { get; set; }
+        //   public string StaffCode { get; set; }
 
-        #endregion
+        //#endregion
 
         #region Sayali and Om
         public class InventoryOJ
@@ -584,7 +643,7 @@ namespace P2PLibray.Inventory
         public string RowName { get; set; }
         public string BinName { get; set; }
         public string ItemName { get; set; }
-        public int MaxQuantity { get; set; }
+        public string MaxQuantity { get; set; }
         public int CurrentItems { get; set; }
 
 
@@ -601,6 +660,7 @@ namespace P2PLibray.Inventory
     #endregion
     public class Fetch
     {
+        public string SectionCode { get; set; }
         public int StatusId { get; set; }
         public string StatusName { get; set; }
 
@@ -627,8 +687,8 @@ namespace P2PLibray.Inventory
         public string QuantitativeName { get; set; } // Added for QuantitativeName
 
 
-       
-       
+
+
 
 
 

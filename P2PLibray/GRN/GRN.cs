@@ -62,6 +62,10 @@ namespace P2PLibray.GRN
         public string ItemName { get; set; }
         public string ItemCode { get; set; }
         public int Quantity { get; set; }
+        public int OrderQuantity { get; set; }
+
+        public int RecievedQuantity { get; set; }
+        public int PendingQuantity { get; set; }
 
         public string OrderedBy { get; set; }
         public DateTime? ExpectedDate { get; set; }
@@ -208,6 +212,7 @@ namespace P2PLibray.GRN
         }
         public class ApprovedPOModelPSM
         {
+            public string RQCode { get; set; }
             public string POCode { get; set; }
             public string VendorName { get; set; }
             public string VendorCompanyName { get; set; }
@@ -216,13 +221,14 @@ namespace P2PLibray.GRN
             public string ApprovedRejectedDate { get; set; }
             public string ItemName { get; set; }
             public string StatusName { get; set; }
+           
         }
 
 
 
         #endregion
 
-      
+
 
     }
 }

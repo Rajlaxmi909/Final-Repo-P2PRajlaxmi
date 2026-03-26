@@ -3,10 +3,15 @@ using P2PLibray.GRN;
 using P2PLibray.Quality;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
+using static P2PLibray.Quality.GRNShowItemPR;
 using static P2PLibray.Quality.Quality;
 
 namespace P2PERP.Controllers
@@ -44,11 +49,60 @@ namespace P2PERP.Controllers
             }
             return View();
         }
+
+
+        [Route("Quality/SendMail")]
+        [HttpGet]
+        public ActionResult SendMailHSB()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult SendMailHSB(HttpPostedFileBase attachment, string toEmail, string subject, string messageBody)
+        {
+            try
+            {
+                string fromEmail = System.Configuration.ConfigurationManager.AppSettings["SenderEmail"];
+                string password = System.Configuration.ConfigurationManager.AppSettings["SenderPassword"];
+
+                MailMessage mail = new MailMessage();
+                mail.From = new MailAddress(fromEmail);
+                mail.To.Add(toEmail);
+                mail.Subject = subject;
+                mail.Body = messageBody;
+                mail.IsBodyHtml = true;
+
+                // Add attachment if provided
+                if (attachment != null && attachment.ContentLength > 0)
+                {
+                    string fileName = Path.GetFileName(attachment.FileName);
+                    mail.Attachments.Add(new Attachment(attachment.InputStream, fileName));
+                }
+
+                SmtpClient smtp = new SmtpClient("smtp.gmail.com")
+                {
+                    Port = 587,
+                    Credentials = new NetworkCredential(fromEmail, password),
+                    EnableSsl = true
+                };
+
+                smtp.Send(mail);
+                ViewBag.Status = "Email sent successfully!";
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Status = "Error: " + ex.Message;
+            }
+
+            return View();
+        }
         #endregion
 
         #region Prashant
 
         // Loads the Quality Check Reports page (View only)
+        [DisplayName("Qality Cheack Reports")]
         public ActionResult QalityCheackReports()
         {
             return View();
@@ -115,14 +169,13 @@ namespace P2PERP.Controllers
         [HttpGet]
         public async Task<JsonResult> ConfirmItemsPSR()
         {
-           
             var confirmList = await bal.ConfirmItemGrnPSR();
 
-            return Json(new { data = confirmList }, JsonRequestBehavior.AllowGet);
-        }
+			return Json(new { data = confirmList }, JsonRequestBehavior.AllowGet);
+		}
 
-        // ✅ Get Confirmed Item Details by GRN Code
-        [HttpGet]
+		// ✅ Get Confirmed Item Details by GRN Code
+		[HttpGet]
         public async Task<JsonResult> ConfirmedItemsDetailsPR(string grnCode)
         {
             if (string.IsNullOrEmpty(grnCode))
@@ -155,7 +208,7 @@ namespace P2PERP.Controllers
         [HttpGet]
         public async Task<JsonResult> nonConfirmItemsPR()
         {
-           
+
             var nonconfirmList = await bal.NonConfirmItemGrnPR();
 
             return Json(new { data = nonconfirmList }, JsonRequestBehavior.AllowGet);
@@ -195,7 +248,7 @@ namespace P2PERP.Controllers
         [HttpGet]
         public async Task<JsonResult> GRNShowListPSR()
         {
-           
+
             var grnList = await bal.GRNShowListAsyncPR();
 
             return Json(new { data = grnList }, JsonRequestBehavior.AllowGet);
@@ -203,47 +256,80 @@ namespace P2PERP.Controllers
 
 
 
-		// ========================== Graph Reports ==========================
-		// Confirmed Items Controller
-		[HttpGet]
-		public async Task<JsonResult> ConfirmedItemDetailsPSR(DateTime? startDate = null, DateTime? endDate = null)
-		{
-			try
-			{
-				var confirmedItems = await bal.ConfirmItemDetailsPSR(startDate, endDate);
-				return Json(new { success = true, data = confirmedItems }, JsonRequestBehavior.AllowGet);
-			}
-			catch (Exception ex)
-			{
-				return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
-			}
-		}
+        // ========================== Graph Reports ==========================
+        // Confirmed Items Controller
+        [HttpGet]
+        public async Task<JsonResult> ConfirmedItemDetailsPSR(DateTime? startDate = null, DateTime? endDate = null)
+        {
+            try
+            {
+                var confirmedItems = await bal.ConfirmItemDetailsPSR(startDate, endDate);
+                return Json(new { success = true, data = confirmedItems }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
 
-		// Failed Items Controller
-		[HttpGet]
-		public async Task<JsonResult> FailedItemsGraphPR(DateTime? startDate = null, DateTime? endDate = null)
-		{
-			try
-			{
-				var failedItems = await bal.GetFailedItemsPR(startDate, endDate);
-				return Json(new { success = true, data = failedItems }, JsonRequestBehavior.AllowGet);
-			}
-			catch (Exception ex)
-			{
-				return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
-			}
-		}
+        // Failed Items Controller
+        [HttpGet]
+        public async Task<JsonResult> FailedItemsGraphPR(DateTime? startDate = null, DateTime? endDate = null)
+        {
+            try
+            {
+                var failedItems = await bal.GetFailedItemsPR(startDate, endDate);
+                return Json(new { success = true, data = failedItems }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message }, JsonRequestBehavior.AllowGet);
+            }
+        }
 
+        // Pending Items Controller
+        public async Task<JsonResult> PendingItemsGraphPR(string startDate = null, string endDate = null)
+        {
+            try
+            {
+                // Fetch data from BAL method
+                var dr = await bal.GetPendingItemsAsyncPR(startDate, endDate);
 
+                List<PendingItemPR> pendingList = new List<PendingItemPR>();
 
+                // Read data and populate list
+                if (dr.HasRows)
+                {
+                    while (await dr.ReadAsync())
+                    {
+                        pendingList.Add(new PendingItemPR
+                        {
+                            GRNCode = dr["GRNCode"]?.ToString() ?? "",
+                            ItemCode = dr["ItemCode"]?.ToString() ?? "",
+                            ItemName = dr["ItemName"]?.ToString() ?? "",
+                            AddedDate = dr["ItemAddedDate"]?.ToString() ?? ""
+                        });
+                    }
+                }
+                dr.Close();
 
-
+                // Return JSON result
+                return Json(new { data = pendingList }, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ex)
+            {
+                // Log error
+                System.Diagnostics.Debug.WriteLine($"Error in PendingItemsGraphPR: {ex.Message}");
+                return Json(new { data = new List<PendingItemPR>() }, JsonRequestBehavior.AllowGet);
+            }
+        }
         #endregion Prashant
 
         #region Rajlaxmi
 
         // GET: QualityP2P
         //  Default Index action
+        [DisplayName("Check Quality")]
         public ActionResult IndexRG()
         {
             return View();
@@ -410,6 +496,8 @@ namespace P2PERP.Controllers
             return View();
         }
 
+        [Route("Quality/QCheckDashboard")]
+        [DisplayName("Dashboard")]
         // GET: Quality Dashboard for NAM
         public ActionResult QCheckDashboardNAM()
         {
@@ -434,7 +522,7 @@ namespace P2PERP.Controllers
             return View();
         }
 
-        
+
 
         // Fetch Confirmed and Non-Confirmed counts
         [HttpGet]
@@ -445,28 +533,34 @@ namespace P2PERP.Controllers
             // Return JSON result
             return Json(result, JsonRequestBehavior.AllowGet);
         }
-       
+
 
         // Fetch Confirmed items List
         [HttpGet]
-        public async Task<JsonResult> GetConfirmedListNAM()
+        public async Task<JsonResult> GetConfirmedListNAM(DateTime? startDate, DateTime? endDate)
         {
             // Call BAL to get confirmed GRN list
-            var list = await bal.GetConfirmedListNAM();
+            var list = await bal.GetConfirmedListNAM(startDate, endDate);
             // Return JSON result
             return Json(list, JsonRequestBehavior.AllowGet);
         }
         // Fetch NonConfirmed GRN List
         [HttpGet]
-        public async Task<JsonResult> GetNonConfirmedListNAM()
+        public async Task<JsonResult> GetNonConfirmedListNAM(DateTime? startDate, DateTime? endDate)
         {
             // Call BAL to get Nonconfirmed items  list
-            var list = await bal.GetNonConfirmedListNAM();
+            var list = await bal.GetNonConfirmedListNAM(startDate, endDate);
             // Return JSON result
             return Json(list, JsonRequestBehavior.AllowGet);
         }
+
+
+
+        public async Task<JsonResult> GetPendingListNAM(DateTime? startDate, DateTime? endDate)
+        {
+            var result = await bal.GetPendingListNAM(startDate, endDate);
+            return Json(result, JsonRequestBehavior.AllowGet);
+        }
         #endregion
-
-
     }
 }

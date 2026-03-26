@@ -1,37 +1,89 @@
-﻿
-@{
-    ViewBag.Title = "StocksCheakLM";
+﻿@{
+    ViewBag.Title = "Stocks Check";
 }
 
-<div class="container">
-    <ul class="nav nav-pills nav-justified bg-white" id="stockTabs" role="tablist">
-        <li class="nav-item card shadow me-2" role="presentation">
+<div class="card m-2">
+
+    <!-- Headings (only one visible at a time) -->
+    <h3 id="headingCurrent" class="text-primary text-center fw-bolder mt-3">Current Stock Check</h3>
+    <h3 id="headingNonMoving" class="text-primary text-center fw-bolder mt-3" style="display:none;">Non-Moving Stock Check</h3>
+    <h3 id="headingQuality" class="text-primary text-center fw-bolder mt-3" style="display:none;">Quality Check Stock</h3>
+
+    <!-- Stock Tabs -->
+    <ul class="nav nav-pills m-lg-5" id="stockTabs" role="tablist">
+        <li class="nav-item" role="presentation">
             <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current" type="button" role="tab">
                 Current Stock
             </button>
         </li>
-        <li class="nav-item card shadow me-2" role="presentation">
+        <li class="nav-item" role="presentation">
             <button class="nav-link" id="nonmoving-tab" data-bs-toggle="tab" data-bs-target="#nonmoving" type="button" role="tab">
                 Non-Moving Stock
             </button>
         </li>
-        <li class="nav-item card shadow" role="presentation">
+        <li class="nav-item" role="presentation">
             <button class="nav-link" id="qualitystock-tab" data-bs-toggle="tab" data-bs-target="#qualitystock" type="button" role="tab">
                 Stock In Quality Check
             </button>
         </li>
     </ul>
 
+    <!-- Tab Content -->
+    <div class="tab-content mt-3">
+        <div class="tab-pane fade show active" id="current" role="tabpanel">
+            @Html.Partial("_currentStocksLM")
+        </div>
+        <div class="tab-pane fade" id="nonmoving" role="tabpanel">
+            @Html.Partial("_nonMovingStockLM")
+        </div>
+        <div class="tab-pane fade" id="qualitystock" role="tabpanel">
+            @Html.Partial("_qualityCheakLM")
+        </div>
+    </div>
 </div>
 
-<div class="tab-content mt-3">
-    <div class="tab-pane fade show active" id="current" role="tabpanel">
-        @Html.Partial("_currentStocksLM")
-    </div>
-    <div class="tab-pane fade" id="nonmoving" role="tabpanel">
-        @Html.Partial("_nonMovingStockLM")
-    </div>
-    <div class="tab-pane fade" id="qualitystock" role="tabpanel">
-        @Html.Partial("_qualityCheakLM")
-    </div>
-</div>
+<style>
+    .content-wrapper {
+        justify-content: start !important;
+    }
+
+    .nav-pills ~ .tab-content {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+</style>
+
+<script>
+    $(document).ready(function () {
+
+        // ✅ Show heading based on active tab
+        $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+            var target = $(e.target).data('bs-target');
+
+            // Hide all headings first
+            $("#headingCurrent, #headingNonMoving, #headingQuality").hide();
+
+            // Show heading based on selected tab
+            if (target === '#current') {
+                $("#headingCurrent").show();
+            } else if (target === '#nonmoving') {
+                $("#headingNonMoving").show();
+            } else if (target === '#qualitystock') {
+                $("#headingQuality").show();
+            }
+        });
+
+        // ✅ Handle case if page loads with another active tab (refresh / back)
+        var activeTab = $('.nav-link.active').data('bs-target');
+        $("#headingCurrent, #headingNonMoving, #headingQuality").hide();
+
+        if (activeTab === '#nonmoving') {
+            $("#headingNonMoving").show();
+        } else if (activeTab === '#qualitystock') {
+            $("#headingQuality").show();
+        } else {
+            $("#headingCurrent").show();
+        }
+    });
+</script>

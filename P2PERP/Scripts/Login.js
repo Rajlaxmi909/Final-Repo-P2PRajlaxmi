@@ -39,7 +39,7 @@ function handleAjaxForm(form) {
 
                 case "changePassword":
                     showToast("Password Changed Successfully", "success");
-                    setTimeout(() => window.location.href = "/Account/MainLogin", 3000);
+                    setTimeout(() => window.location.href = "/Account/Logout", 3000);
                     break;
             }
         },
@@ -73,13 +73,13 @@ function redirectByDepartment(department) {
         case 1: window.location.href = `/Admin/Index`; break;
         case 2: window.location.href = `/Purchase/UserDashboardPRK`; break;
         case 3: window.location.href = `/GRN/GRNDashboardRHK`; break;
-        case 4: window.location.href = `/Quality/QualityView`; break;
+        case 4: window.location.href = `/Quality/QCheckDashboard`; break;
         case 5: window.location.href = `/Accountant/Index`; break;
-        case 6: window.location.href = `/Inventory/Index`; break;
+        case 6: window.location.href = `/Inventory/InventoryDashboard`; break;
         case 7: window.location.href = `/Production/Index`; break;
         case 8: window.location.href = `/AdmSalesAndDistributionin/Index`; break;
         case 9: window.location.href = `/HumanResources/Index`; break;
         case 10: window.location.href = `/Maintenance/Index`; break;
-        default: window.location.href = `/Dashboard/Index`; break;
+        default: window.location.href = `/Account/Logout`; break;
     }
 }

@@ -1,71 +1,150 @@
-﻿<div class="container mt-4">
-    <!-- Title Section -->
-    <h3 class="fw-bold text-dark text-center">
-        <span class="text-warning">Purchase Requisition</span>
-    </h3>
+﻿@{
+    ViewBag.Title = "All Requisitions";
+}
 
-    <!-- Navigation Tabs -->
-    <ul class="nav nav-pills nav-justified" id="stockTabs" role="tablist">
-        <!-- Tab: All PR -->
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current" type="button" role="tab">
-                All PR
-            </button>
-        </li>
+<style>
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        border: 1px solid #ced4da;
+        transition: all 0.3s ease;
+    }
 
-        <!-- Tab: Create New PR -->
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="nonmoving-tab" data-bs-toggle="tab" data-bs-target="#createpr" type="button" role="tab">
-                Create New PR
-            </button>
-        </li>
+        .form-control:focus, .form-select:focus {
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+            border-color: #86b7fe;
+        }
 
-        <!-- Tab: Pending PR -->
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="nonmoving-tab" data-bs-toggle="tab" data-bs-target="#pendingpr" type="button" role="tab">
-                Pending PR
-            </button>
-        </li>
+    .btn {
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
 
-        <!-- Tab: Approved PR -->
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="nonmoving-tab" data-bs-toggle="tab" data-bs-target="#approvedpr" type="button" role="tab">
-                Approved PR
-            </button>
-        </li>
-    </ul>
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
 
-    <!-- Tab Content Section -->
-    <div class="tab-content mt-3">
-        <!-- All PR Content -->
-        <div class="tab-pane fade show active" id="current" role="tabpanel">
-            @Html.Partial("_AllPRSP")
+    .card {
+        border: none;
+    }
+
+    .table th {
+        border-top: none;
+        font-weight: 600;
+    }
+
+    .table-responsive {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    /*  Compact Table Row Size */
+    .table td, .table th {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.78rem;
+        vertical-align: middle;
+    }
+
+    .btn-delete {
+        padding: 2px 6px !important;
+        font-size: 0.70rem !important;
+    }
+
+        .btn-delete i {
+            font-size: 0.75rem !important;
+        }
+
+
+    @@media (max-width: 768px) {
+        .form-control, .form-select, .btn, .table td, .table th {
+            font-size: 0.85rem;
+        }
+    }
+</style>
+<div class="container mt-3">
+
+    <div class="card shadow-sm">
+        <div class="card-header p-0">
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-pills nav-justified small-tabs" id="stockTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#current" type="button" role="tab">
+                        <i class="bi bi-list-ul me-1"></i> All PR
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#createpr" type="button" role="tab">
+                        <i class="bi bi-plus-circle me-1"></i> Create New PR
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link " data-bs-toggle="tab" data-bs-target="#pendingpr" type="button" role="tab">
+                        <i class="bi bi-hourglass-split me-1"></i> Pending PR
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#approvedpr" type="button" role="tab">
+                        <i class="bi bi-check-circle me-1"></i> Approved PR
+                    </button>
+                </li>
+
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#rejectpr" type="button" role="tab">
+                        <i class="bi bi-check-circle me-1"></i> Rejected PR
+                    </button>
+                </li>
+            </ul>
         </div>
 
-        <!-- Create PR Content -->
-        <div class="tab-pane fade show" id="createpr" role="tabpanel">
-            @Html.Partial("_CreatePR")
-        </div>
+        <div class="card-body">
+            <!-- Tab Content -->
+            <div class="tab-content mt-2">
+                <div class="tab-pane fade show active" id="current" role="tabpanel">
+                    @Html.Partial("_AllPRSP")
+                </div>
 
-        <!-- Pending PR Content -->
-        <div class="tab-pane fade show" id="pendingpr" role="tabpanel">
-            @Html.Partial("_PendingPRSP")
-        </div>
+                <div class="tab-pane fade" id="createpr" role="tabpanel">
+                    @Html.Partial("_CreatePR")
+                </div>
 
-        <!-- Approved PR Content -->
-        <div class="tab-pane fade show" id="approvedpr" role="tabpanel">
-            @Html.Partial("_ApprovedPRSP")
+                <div class="tab-pane fade" id="pendingpr" role="tabpanel">
+                    @Html.Partial("_PendingPRSP")
+                </div>
+
+                <div class="tab-pane fade" id="approvedpr" role="tabpanel">
+                    @Html.Partial("_ApprovedPRSP")
+                </div>
+
+                <div class="tab-pane fade" id="rejectpr" role="tabpanel">
+                    @Html.Partial("_Rejectpr")
+                </div>
+            </div>
         </div>
     </div>
+
 </div>
 
+<!-- Make tabs small without changing Bootstrap colors -->
+<style>
+    .small-tabs .nav-link {
+        font-size: 0.85rem !important; /* smaller text */
+        padding: 4px 8px !important; /* compact padding */
+        line-height: 1.2;
+    }
+
+    .small-tabs {
+        gap: 4px; /* small gap between tabs */
+    }
+</style>
+
 <script>
-    // Script to manually handle 'active' class switching for nav links
+    // Optional: Ensure manual active state if Bootstrap JS not applied
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', function () {
-            // Remove 'active' from all links
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            // Add 'active' to clicked link
             this.classList.add('active');
         });
     });

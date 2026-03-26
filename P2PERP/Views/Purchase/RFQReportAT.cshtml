@@ -1,4 +1,8 @@
-﻿@model IEnumerable<P2PLibray.Purchase.Purchase>
+﻿@{
+    ViewBag.Title = "RFQ Reports";
+}
+
+@model IEnumerable<P2PLibray.Purchase.Purchase>
 
 <div id="pageContent" class="main-ocntent">
     <div class="container mt-5">
@@ -13,16 +17,18 @@
                 </div>
             </div>
         </div>
+        <h5 id="reportHeading" class="text-center text-primary fw-bold mb-3"></h5>
 
         <!-- ✅ Chart Section -->
-        <div class="row mb-4">
+        <!--<div class="row mb-4">
             <div class="col-md-12">
                 <div class="card p-3 shadow h-100">
                     <h4 class="text-primary fw-bold text-center mb-3">RFQ Vendors Invited vs Responded</h4>
+
                     <div id="rfqBarChart" style="height:350px;"></div>
                 </div>
             </div>
-        </div>
+        </div>-->
 
 
 
@@ -43,13 +49,14 @@
 
         <!-- ✅ Table Section -->
         <div class="card p-3 shadow">
-            <h3 class="mb-3">RFQ List</h3>
+            <h3 class="mb-3 text-center text-primary">RFQ List</h3>
             <div class="table-responsive">
                 <table id="purchaseTable" class="table table-striped table-bordered nowrap w-100">
                     <thead class="table-dark">
                         <tr>
                             <th><input type="checkbox" id="selectAll" /></th> <!-- checkbox first -->
                             <th>Sr.</th> <!-- serial number second -->
+                            <th>PR Code</th>
                             <th>RFQ Code</th>
                             <th>Status</th>
                             <th>Added By</th>
@@ -67,24 +74,21 @@
                             <tr>
                                 <td><input type="checkbox" class="rowCheckbox" value="@item.RFQCode" /></td>
                                 <td></td> <!-- serial filled by JS -->
+                                <td>@item.PRCode</td>
                                 <td>@item.RFQCode</td>
                                 <td>@item.StatusName</td>
                                 <td>@item.AddedBy</td>
                                 @*<td>@(DateTime.TryParse(item.AddedDate, out var d) ? d.ToString("dd-MM-yyyy") : "-")</td>*@
-                                <td>
-                                   @(item.AddedDateAT.HasValue 
-        ? item.AddedDateAT.Value.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture) 
-        : "")
-                                </td>
+                                <td>@(item.AddedDateAT.HasValue? item.AddedDateAT.Value.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture): "")</td>
                                 <td>@item.VendorsInvited</td>
-                                <td>@item.VendorsResponded</td> 
+                                <td>@item.VendorsResponded</td>
                                 <td>@item.ResponseRatePercent</td>
                                 <td>@item.FinalOutcomePOCode</td>
                                 <td>
                                     <button id="btnview" type="button"
-                                            class="btn btn-sm btn-primary view-vendors"
+                                            class="btn btn-sm btn-primary view-vendors rounded-2"
                                             data-rfqcode="@item.RFQCode">
-                                        <i class="bi bi-eye"></i>
+                                        <i class="bi bi-eye fs-6"></i>
                                     </button>
 
                                 </td>
@@ -102,25 +106,42 @@
 
 @*Modal View*@
 
+<div class="modal fade" id="rfqVendorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content shadow-lg rounded-3">
+            <div class="modal-header bg-primary d-flex justify-content-center align-items-center rounded-top p-1">
+                <!-- Modal title -->
+                <h5 class="modal-title fw-bold text-white mb-0 fs-5">RFQ Vendor Responses</h5>
+                <!-- Close button -->
+                <button type="button" class="btn-close btn-close-white position-absolute end-0 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
 
-<div class="modal fade" data-bs-backdrop="true" id="rfqVendorModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <div class="w-100 text-center">
-                    <h5 class="modal-title text-white mb-0">RFQ Vendor Responses</h5>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="mb-0 ms-5 mt-5">
+                <h6 class="fw-bold">
+                    RFQ: <span id="lblRFQCode" class="text-primary"></span>
+                </h6>
             </div>
 
             <div class="modal-body">
+
+                <style>
+                    th {
+                        white-space: nowrap; /* Keep text in one line */
+                    }
+
+                    .table-wider th {
+                        min-width: 150px; /* Adjust width as needed */
+                    }
+                </style>
                 <table id="rfqVendorTable" class="table table-striped table-bordered w-100">
                     <thead class="table-dark">
                         <tr>
+                            <th class="text-center">Sr.</th>
                             <th class="text-center">RQ Code</th>
                             <th class="text-center">Vendor Name</th>
-                            <th class="text-center">Days to Receive Quotation</th>
+                            <th class="text-center">Quotation Date</th>
                             <th class="text-center">Days to Approve Quotation</th>
+                            <th class="text-center">Status</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -179,13 +200,72 @@
 </style>
 
 <script>
+
+
+    // Clear processing state for all DataTable buttons
+    window.__dt_clearAllProcessing = function () {
+        try {
+            // Try to clear via DataTables API
+            var tables = $.fn.dataTable.tables();
+            for (var i = 0; i < tables.length; i++) {
+                try {
+                    var api = $(tables[i]).DataTable();
+                    if (!api || !api.buttons) continue;
+                    var btnCount = (api.buttons().nodes && api.buttons().nodes().length) || 0;
+                    for (var j = 0; j < btnCount; j++) {
+                        try { api.button(j).processing(false); } catch (e) { }
+                    }
+                } catch (e) { }
+            }
+        } catch (e) { }
+
+        // Fallback DOM cleanup
+        try {
+            $('.dt-button').removeClass('dt-button-processing');
+            $('.dt-button').prop('disabled', false);
+        } catch (e) { }
+    };
+
+    // Listen for print-done message from print window
+    window.addEventListener('message', function (ev) {
+        if (ev && ev.data === 'dt_print_done') {
+            window.__dt_clearAllProcessing();
+        }
+    });
+
+    // Store original button actions if not already stored
+    if (!$.fn.dataTable.ext.buttons.pdfHtml5.__originalAction) {
+        $.fn.dataTable.ext.buttons.pdfHtml5.__originalAction =
+            $.fn.dataTable.ext.buttons.pdfHtml5.action;
+    }
+    if (!$.fn.dataTable.ext.buttons.print.__originalAction) {
+        $.fn.dataTable.ext.buttons.print.__originalAction =
+            $.fn.dataTable.ext.buttons.print.action;
+    }
+    if (!$.fn.dataTable.ext.buttons.excelHtml5.__originalAction) {
+        $.fn.dataTable.ext.buttons.excelHtml5.__originalAction =
+            $.fn.dataTable.ext.buttons.excelHtml5.action;
+    }
+    if (!$.fn.dataTable.ext.buttons.csvHtml5.__originalAction) {
+        $.fn.dataTable.ext.buttons.csvHtml5.__originalAction =
+            $.fn.dataTable.ext.buttons.csvHtml5.action;
+    }
+
+
     var table, rfqChart;
     var startDate = null, endDate = null;
 
     $(document).ready(function () {
+
+
+
+
+
+
         table = $('#purchaseTable').DataTable({
             scrollX: false,
             autoWidth: false,
+            ordering: false,
             dom:
                 "<'row mb-2'<'col-6'B><'col-6 text-end'f>>" +
                 "<'row'<'col-12'tr>>" +
@@ -194,65 +274,156 @@
             columnDefs: [
                 { targets: 0, orderable: false, searchable: false }, // checkbox
                 { targets: 1, orderable: false, searchable: false }, // serial
-                { targets: 4, visible: false }                       // 🔥 hide "Added By" column
+                { targets: 5, visible: false }                       // 🔥 hide "Added By" column
+
             ],
 
+
+
+
+
+            //createdRow: function (row, data, dataIndex) {
+            //    var status = data[3]; // Status column index (0-based)
+            //    var $cell = $('td', row).eq(3);
+
+            //    if (status === "Requested") {
+            //        $cell.html('<span class="status-badge text-white bg-success">Requested</span>');
+            //    } else if (status === "Pending") {
+            //        $cell.html('<span class="status-badge text-white bg-warning">Pending</span>');
+            //    }
+            //},
             createdRow: function (row, data, dataIndex) {
-                var status = data[3]; // Status column index (0-based)
-                var $cell = $('td', row).eq(3);
+
+                // ---- EXISTING STATUS LOGIC (unchanged) ----
+                var status = data[4];
+                var $statusCell = $('td', row).eq(4);
 
                 if (status === "Requested") {
-                    $cell.html('<span class="status-badge text-white bg-success">Requested</span>');
+                    $statusCell.html('<span class="status-badge text-white bg-success">Requested</span>');
                 } else if (status === "Pending") {
-                    $cell.html('<span class="status-badge text-white bg-warning">Pending</span>');
+                    $statusCell.html('<span class="status-badge text-white bg-warning">Pending</span>');
+                }
+
+                //// ---- ONLY REQUIRED CHECK ----
+                //var vendorsInvited = parseInt(data[5], 9);
+                //var responses = parseInt(data[6], 9);
+
+                //if (vendorsInvited == 0 && responses == 0) {
+                //    $('td', row).eq(7).html('<span class="text-muted">NA</span>'); // Response Rate
+                //    $('td', row).eq(8).html('<span class="text-muted">NA</span>'); // Generated PO
+                //}
+                // ---- NA LOGIC (SIMILAR TO RFQ EXAMPLE) ----
+                var vendorsInvited = parseInt(data[7], 10); // Vendors Invited
+                var responses = parseInt(data[8], 10);      // Responses
+
+                if (vendorsInvited === 0 && responses === 0) {
+                    $('td', row).eq(9).html('<span class="text-muted">NA</span>'); // Response Rate
+                    $('td', row).eq(10).html('<span class="text-muted">NA</span>'); // Generated PO
                 }
             },
+
+
+
             order: [[2, 'asc']],
             buttons: [
 
                 //Print
+                //Print
                 {
                     extend: 'print',
-                    title: 'RFQ List',
+                    title: '', // remove default title
                     text: '<i class="bi bi-printer-fill text-dark fs-5"></i>',
+
                     exportOptions: {
+                        columns: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], // include Sr.No, exclude checkbox & action
                         rows: function (idx, data, node) {
                             return $(node).find('input.rowCheckbox').prop('checked');
                         },
-                        columns: [1, 2, 3, 4, 5, 6, 7, 8, 9], // exclude checkbox
                         format: {
-                            body: function (data, row, column, node) {
-                                if (column === 1) {
-                                    // correct serial number based on filtered rows
-                                    var idxInFiltered = table.rows({ filter: 'applied' }).indexes().indexOf(row);
-                                    return idxInFiltered + 1;
-                                }
+                            body: function (data, rowIdx, colIdx, node) {
+                                // remove HTML tags
+                                if (typeof data === 'string') return data.replace(/<\/?[^>]+(>|$)/g, "").trim();
                                 return data;
                             }
                         }
                     },
+
                     action: function (e, dt, button, config) {
-                        if ($('.rowCheckbox:checked').length === 0) {
+                        var selected = dt.rows().nodes().to$().find('input.row-select:checked').length;
+                        var btnApi = dt.button(button);
+
+                        // Support both checkbox classes
+                        var selectedCount = selected || $('.rowCheckbox:checked').length;
+
+                        // --- No selection ---
+                        if (selectedCount === 0) {
                             showExportToast();
+                            try { btnApi.processing(false); } catch (err) { }
                             return;
                         }
-                        $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, button, config);
-                    },
-                    customize: function (win) {
-                        // center the heading
-                        $(win.document.body).find('h1').css({
-                            'text-align': 'center',
-                            'font-size': '20px',
-                            'margin-bottom': '0'
-                        });
-                        // add export date below heading
-                        var exportDate = new Date().toLocaleDateString('en-GB');
-                        $(win.document.body).find('h1').after('<div style="text-align:center; margin-bottom:10px; font-size:12px;">Export Date: ' + exportDate + '</div>');
 
-                        // center the table
-                        $(win.document.body).find('table').css({
-                            'margin': '0 auto',
-                            'text-align': 'center'
+                        // --- Show spinner ---
+                        try { btnApi.processing(true); } catch (err) { }
+
+                        // --- Execute original Print action safely ---
+                        try {
+                            $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, button, config);
+                        } catch (err) {
+                            setTimeout(function () {
+                                try { btnApi.processing(false); } catch (e) { }
+                            }, 300);
+                            throw err;
+                        }
+
+                        // --- Final safeguard to stop spinner if print window doesn't respond ---
+                        setTimeout(function () {
+                            try { btnApi.processing(false); } catch (err) { }
+                        }, 2000);
+                    },
+
+                    customize: function (win) {
+                        var exportDate = new Date().toLocaleDateString('en-GB');
+
+                        // Remove default DataTables title
+                        $(win.document.body).find('h1').remove();
+
+                        // Add custom title and export date
+                        $(win.document.body).prepend(`
+            <h2 style="text-align:center; margin-bottom:0.2em;">RFQ List</h2>
+            <p style="text-align:center; font-size:10pt; margin-top:0;">Generated Date: ${exportDate}</p>
+        `);
+
+                        var $table = $(win.document.body).find('table');
+                        $table
+                            .addClass('display')
+                            .css({
+                                'font-size': '10pt',
+                                'border-collapse': 'collapse',
+                                'width': '100%'
+                            });
+
+                        // 🖤 Black header with white text
+                        $table.find('thead th').css({
+                            'background-color': 'black',
+                            'color': 'white',
+                            'font-weight': 'bold',
+                            'text-align': 'center',
+                            'vertical-align': 'middle',
+                            'padding': '8px',
+                            'border': '1px solid #000'
+                        });
+
+                        // Style table body cells
+                        $table.find('tbody td').css({
+                            'text-align': 'center',
+                            'vertical-align': 'middle',
+                            'padding': '6px',
+                            'border': '1px solid #000'
+                        });
+
+                        // ✅ Recompute Sr.No in print (first column) - Sequential serial numbers
+                        $table.find('tbody tr').each(function (i, row) {
+                            $(row).find('td').eq(0).text(i + 1);
                         });
                     }
                 },
@@ -262,68 +433,156 @@
                     extend: 'pdfHtml5',
                     title: 'RFQ List',
                     text: '<i class="bi bi-file-earmark-pdf text-danger fs-5"></i>',
+
+
                     orientation: 'landscape',
                     pageSize: 'A4',
+
                     exportOptions: {
+                        // Exclude the actual first and last columns dynamically (checkbox and action columns)
+                        columns: function (idx, data, node) {
+                            var dt = table; // uses your existing DataTable instance
+                            var colIndexes = dt.columns().indexes().toArray(); // actual column indexes
+                            var firstIdx = colIndexes[0]; // checkbox column
+                            var lastIdx = colIndexes[colIndexes.length - 1]; // action column
+                            return idx !== firstIdx && idx !== lastIdx;
+                        },
+
+                        // Export only selected rows if any
                         rows: function (idx, data, node) {
                             return $(node).find('input.rowCheckbox').prop('checked');
                         },
-                        columns: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+
+                        // Recalculate serial number based on exported first column
                         format: {
-                            body: function (data, row, column, node) {
-                                if (column === 1) {
-                                    // serial number based on filtered rows
-                                    var idxInFiltered = table.rows({ filter: 'applied' }).indexes().indexOf(row);
-                                    return idxInFiltered + 1;
-                                }
+                            body: function (data, rowIdx, colIdx, node) {
+                                var dt = table;
+                                var colIndexes = dt.columns().indexes().toArray();
+                                var firstIdx = colIndexes[0];
+                                if (colIdx === firstIdx) return rowIdx + 1; // Serial no.
+                                if (typeof data === 'string') return data.replace(/<\/?[^>]+(>|$)/g, "").trim();
                                 return data;
                             }
                         }
                     },
+
+                    // ✅ Prevent export if no row selected
                     action: function (e, dt, button, config) {
-                        if ($('.rowCheckbox:checked').length === 0) {
+                        var selected = dt.rows().nodes().to$().find('input.row-select:checked').length;
+                        var btnApi = dt.button(button);
+
+                        // Check both row-select and rowCheckbox for flexibility
+                        var selectedCount = selected || $('.rowCheckbox:checked').length;
+
+                        if (selectedCount === 0) {
                             showExportToast();
+                            try { btnApi.processing(false); } catch (err) { }
                             return;
                         }
-                        $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
+
+                        // Show spinner
+                        try { btnApi.processing(true); } catch (err) { }
+
+                        // Patch pdfMake to stop spinner when done
+                        if (window.pdfMake && pdfMake.createPdf && !pdfMake._patchedForDT) {
+                            (function () {
+                                var origCreate = pdfMake.createPdf;
+                                pdfMake.createPdf = function (docDefinition) {
+                                    var pdfDoc = origCreate.call(pdfMake, docDefinition);
+                                    var origDownload = pdfDoc.download;
+                                    pdfDoc.download = function (filename, cb) {
+                                        origDownload.call(pdfDoc, filename, function () {
+                                            try { btnApi.processing(false); } catch (err) { }
+                                            if (typeof cb === 'function') cb();
+                                        });
+                                    };
+                                    return pdfDoc;
+                                };
+                                pdfMake._patchedForDT = true;
+                            })();
+                        }
+
+                        // ✅ Call original PDF export action
+                        try {
+                            $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
+                        } catch (err) {
+                            // Ensure spinner not left running
+                            setTimeout(function () {
+                                try { btnApi.processing(false); } catch (e) { }
+                            }, 300);
+                            throw err;
+                        }
+
+                        // Final fallback: if export takes long or fails silently, clear spinner
+                        setTimeout(function () {
+                            try { btnApi.processing(false); } catch (err) { }
+                        }, 2000);
                     },
+
                     customize: function (doc) {
-                        // Center heading
-                        doc.content[0].alignment = 'center';
-                        doc.content[0].fontSize = 14;
+                        try {
+                            // --- Center title ---
+                            if (doc.content && doc.content.length > 0 && doc.content[0].text) {
+                                doc.content[0].alignment = 'center';
+                                doc.content[0].fontSize = 14;
+                            }
 
-                        // Add export date below heading
-                        var exportDate = new Date().toLocaleDateString('en-GB');
-                        doc.content.splice(1, 0, {
-                            text: 'Export Date: ' + exportDate,
-                            alignment: 'center',
-                            margin: [0, 0, 0, 8],
-                            fontSize: 10
-                        });
+                            // --- Add Export Date below title ---
+                            const exportDate = new Date().toLocaleDateString('en-GB'); // dd/mm/yyyy
+                            doc.content.splice(1, 0, {
+                                text: 'Generated Date: ' + exportDate,
+                                alignment: 'center',
+                                margin: [0, 0, 0, 8],
+                                fontSize: 10
+                            });
 
-                        // Table header style: black background, white text
-                        doc.styles.tableHeader.fillColor = '#000000';
-                        doc.styles.tableHeader.color = '#ffffff';
-                        doc.styles.tableHeader.alignment = 'center';
-                        doc.styles.tableHeader.bold = true;
+                            // --- Locate table node ---
+                            let tableNodeIndex = doc.content.findIndex(n => n.table);
+                            if (tableNodeIndex === -1) return;
+                            const tableNode = doc.content[tableNodeIndex];
 
-                        // Table layout
-                        var objLayout = {};
-                        objLayout['hLineWidth'] = function (i) { return 0.5; };
-                        objLayout['vLineWidth'] = function (i) { return 0.5; };
-                        objLayout['hLineColor'] = function (i) { return '#aaa'; };
-                        objLayout['vLineColor'] = function (i) { return '#aaa'; };
-                        objLayout['paddingLeft'] = function (i) { return 4; };
-                        objLayout['paddingRight'] = function (i) { return 4; };
-                        doc.content[doc.content.length - 1].layout = objLayout;
+                            // --- Table header/body style ---
+                            doc.styles = doc.styles || {};
+                            doc.styles.tableHeader = {
+                                alignment: 'center',
+                                fillColor: '#000000', // Black background
+                                color: '#ffffff',
+                                bold: true
+                            };
+                            doc.styles.tableBodyEven = { alignment: 'center' };
+                            doc.styles.tableBodyOdd = { alignment: 'center' };
+
+                            // --- Borders and padding ---
+                            tableNode.layout = {
+                                hLineWidth: () => 0.5,
+                                vLineWidth: () => 0.5,
+                                hLineColor: () => '#aaaaaa',
+                                vLineColor: () => '#aaaaaa',
+                                paddingLeft: () => 4,
+                                paddingRight: () => 4,
+                                paddingTop: () => 4,
+                                paddingBottom: () => 4
+                            };
+
+                            // --- Recompute Sr.No in exported table body ---
+                            const body = tableNode.table.body;
+                            for (let r = 1; r < body.length; r++) {
+                                body[r][0] = { text: String(r), alignment: 'center' };
+                            }
+                        } catch (err) {
+                            console.error('PDF customize error:', err);
+                        }
                     }
                 },
+
 
                 //Excel
                 {
                     extend: 'excelHtml5',
                     title: 'RFQ List',
                     text: '<i class="bi bi-file-earmark-excel text-success fs-5"></i>',
+                    messageTop: 'Generated Date: ' + moment().format('DD/MM/YYYY'),
+
                     exportOptions: {
                         rows: function (idx, data, node) {
                             return $(node).find('input.rowCheckbox').prop('checked');
@@ -345,18 +604,44 @@
                         }
                     },
                     action: function (e, dt, button, config) {
-                        if ($('.rowCheckbox:checked').length === 0) {
+                        var selected = dt.rows().nodes().to$().find('input.row-select:checked').length;
+                        var btnApi = dt.button(button);
+
+                        // Support both checkbox classes
+                        var selectedCount = selected || $('.rowCheckbox:checked').length;
+
+                        // --- No selection ---
+                        if (selectedCount === 0) {
                             showExportToast();
+                            try { btnApi.processing(false); } catch (err) { }
                             return;
                         }
-                        $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
-                    }
+
+                        // --- Show spinner ---
+                        try { btnApi.processing(true); } catch (err) { }
+
+                        // --- Call original Excel export action ---
+                        try {
+                            $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
+                        } catch (err) {
+                            console.error('Excel export error:', err);
+                            setTimeout(function () { try { btnApi.processing(false); } catch (e) { } }, 300);
+                            throw err;
+                        }
+
+                        // --- Fallback: stop spinner shortly after ---
+                        setTimeout(function () {
+                            try { btnApi.processing(false); } catch (err) { }
+                        }, 1500);
+                    },
+
                 },
                 //CSV
                 {
                     extend: 'csvHtml5',
                     title: 'RFQ List',
                     text: '<i class="bi bi-filetype-csv text-success fs-5"></i>',
+
                     exportOptions: {
                         rows: function (idx, data, node) {
                             return $(node).find('input.rowCheckbox').prop('checked');
@@ -378,17 +663,45 @@
                         }
                     },
                     action: function (e, dt, button, config) {
-                        if ($('.rowCheckbox:checked').length === 0) {
+                        var selected = dt.rows().nodes().to$().find('input.row-select:checked').length;
+                        var btnApi = dt.button(button);
+
+                        // Support both checkbox classes
+                        var selectedCount = selected || $('.rowCheckbox:checked').length;
+
+                        // --- No selection ---
+                        if (selectedCount === 0) {
                             showExportToast();
+                            try { btnApi.processing(false); } catch (err) { }
                             return;
                         }
-                        $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
-                    }
+
+                        // --- Show spinner ---
+                        try { btnApi.processing(true); } catch (err) { }
+
+                        // --- Call original CSV export action ---
+                        try {
+                            $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
+                        } catch (err) {
+                            console.error('CSV export error:', err);
+                            setTimeout(function () { try { btnApi.processing(false); } catch (e) { } }, 300);
+                            throw err;
+                        }
+
+                        // --- Fallback: stop spinner shortly after ---
+                        setTimeout(function () {
+                            try { btnApi.processing(false); } catch (err) { }
+                        }, 300);
+                    },
+
                 },
                 'colvis'
             ]
 
         });
+        // hide Days To Convert AFTER init
+        table.column(9).visible(false);
+
 
         // ✅ Serial numbers in sequence
         table.on('draw.dt', function () {
@@ -401,55 +714,79 @@
 
 
         // ✅ Date filter
-        //$.fn.dataTable.ext.search.push(function (settings, data) {
-        //    var dateStr = data[5];
-        //    if (!dateStr || dateStr === "-") return true;
-        //    var parts = dateStr.split("-");
-        //    var d = new Date(parts[2], parts[1] - 1, parts[0]);
-        //    if (startDate && d < startDate) return false;
-        //    if (endDate && d > endDate) return false;
-        //    return true;
-        //});
+
         $.fn.dataTable.ext.search.push(function (settings, data) {
-            var dateStr = data[5]; // Added Date column
+            var min = $('#startDate').val();
+            var max = $('#endDate').val();
+
+            var dateStr = data[6]; // Added Date column (dd/MM/yyyy)
             if (!dateStr) return true;
 
-            // Split by slash '/'
             var parts = dateStr.split("/");
             if (parts.length !== 3) return true;
 
-            var d = new Date(parts[2], parts[1] - 1, parts[0]);
-            d.setHours(0, 0, 0, 0);
+            var rowDate = new Date(parts[2], parts[1] - 1, parts[0]);
 
-            var s = startDate ? new Date(startDate) : null;
-            var e = endDate ? new Date(endDate) : null;
-            if (s) s.setHours(0, 0, 0, 0);
-            if (e) e.setHours(0, 0, 0, 0);
+            if (min) {
+                var minDate = new Date(min);
+                if (rowDate < minDate) return false;
+            }
 
-            if (s && d < s) return false;
-            if (e && d > e) return false;
+            if (max) {
+                var maxDate = new Date(max);
+                if (rowDate > maxDate) return false;
+            }
 
             return true;
         });
 
+        $('#startDate, #endDate').on('change', function () {
+            table.draw();
+        });
+        // 🔹 Default to current month
+        var now = moment();
+
+        startDate = now.clone().startOf('month').toDate();
+        endDate = now.clone().endOf('month').toDate();
+
+        // Set heading → January 2026
+        $('#reportHeading').text(now.format('MMMM YYYY'));
+
+        // Apply filter
+        table.draw();
+        //updateChart();
+
         // ✅ Checkbox logic
-        $(document).on('change', '#selectAll', function () {
-            var checked = this.checked;
-            $('.rowCheckbox').prop('checked', checked);
+        //$(document).on('change', '#selectAll', function () {
+        //    var checked = this.checked;
+        //    $('.rowCheckbox').prop('checked', checked);
+        //});
+        $('#selectAll').on('change', function () {
+            $('.rowCheckbox').prop('checked', this.checked);
         });
 
+        //$(document).on('change', '.rowCheckbox', function () {
+        //    var total = $('.rowCheckbox').length;
+        //    var checkedCount = $('.rowCheckbox:checked').length;
+        //    if (checkedCount === total) {
+        //        $('#selectAll').prop('checked', true).prop('indeterminate', false);
+        //    } else if (checkedCount === 0) {
+        //        $('#selectAll').prop('checked', false).prop('indeterminate', false);
+        //    } else {
+        //        // remove minus sign completely
+        //        $('#selectAll').prop('checked', false).prop('indeterminate', false);
+        //    }
+        //});
         $(document).on('change', '.rowCheckbox', function () {
             var total = $('.rowCheckbox').length;
-            var checkedCount = $('.rowCheckbox:checked').length;
-            if (checkedCount === total) {
-                $('#selectAll').prop('checked', true).prop('indeterminate', false);
-            } else if (checkedCount === 0) {
-                $('#selectAll').prop('checked', false).prop('indeterminate', false);
-            } else {
-                // remove minus sign completely
-                $('#selectAll').prop('checked', false).prop('indeterminate', false);
-            }
+            var checked = $('.rowCheckbox:checked').length;
+
+            $('#selectAll').prop({
+                checked: checked === total,
+                indeterminate: checked > 0 && checked < total
+            });
         });
+
 
         // ✅ Date range picker
         $('#dateRange').daterangepicker({
@@ -457,96 +794,123 @@
             alwaysShowCalendars: false,
             locale: {
                 cancelLabel: 'Clear',
-                format: 'DD-MM-YYYY',
+                format: 'DD/MM/YYYY',
                 applyLabel: 'Apply',
                 customRangeLabel: 'Custom Range'
             },
             ranges: {
-                'Today': [moment(), moment()],
-                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                'Last 1 Month': [moment().subtract(1, 'months').startOf('day'), moment()],
-                'Last 3 Months': [moment().subtract(3, 'months').startOf('day'), moment()],
-                'Last 1 Year': [moment().subtract(12, 'months').startOf('day'), moment()]
+                'This Month': [moment().startOf('month'), moment().endOf('month')],
+                'Last Month': [
+                    moment().subtract(1, 'month').startOf('month'),
+                    moment().subtract(1, 'month').endOf('month')
+                ],
+                'Last 6 Months': [moment().subtract(6, 'months'), moment()],
+                'Last 1 Year': [moment().subtract(1, 'year'), moment()]
             }
-        }, function (start, end) {
+        },
+        function (start, end) {
+
             startDate = start.toDate();
             endDate = end.toDate();
-            $('#dateRange').val(start.format('DD-MM-YYYY') + ' - ' + end.format('DD-MM-YYYY'));
-            table.draw();
-            updateChart();
-        });
 
-        $('#dateRange').on('cancel.daterangepicker', function () {
-            $(this).val('Select Date Range');
-            startDate = null; endDate = null;
+            $('#dateRange').val(
+                start.format('DD/MM/YYYY') + ' - ' + end.format('DD/MM/YYYY')
+            );
+
+            // ✅ REAL selected range name
+            let rangeLabel = this.chosenLabel;
+            let headingText = '';
+
+            if (rangeLabel === 'This Month') {
+                headingText = start.format('MMMM YYYY');
+            }
+            else if (rangeLabel === 'Last Month') {
+                headingText = start.format('MMMM YYYY');
+            }
+            else if (rangeLabel === 'Last 6 Months') {
+                headingText =
+                    start.format('MMM YYYY') + ' - ' + end.format('MMM YYYY');
+            }
+            else if (rangeLabel === 'Last 1 Year') {
+                headingText = start.format('YYYY');
+            }
+            else {
+                // Custom Range
+                headingText =
+                    start.format('DD/MM/YYYY') + ' - ' + end.format('DD/MM/YYYY');
+            }
+
+            $('#reportHeading').text(headingText);
+
             table.draw();
-            updateChart();
+            //updateChart();
         });
+        
 
         $('#dateRange').val('Select Date Range');
 
         // ✅ Build/Update Highcharts bar chart (same as your existing updateChart function)
-        function buildChart(rfqCodes, invitedData, respondedData, totalRFQs) {
-            rfqChart = Highcharts.chart('rfqBarChart', {
-                chart: { type: 'column' },
-                title: { text: 'Vendors Invited vs Vendors Responded per RFQ' },
-                subtitle: {
-                    text: '<span style="font-size:32px; font-weight:bold;">Total RFQs: ' + totalRFQs + '</span>',
-                    align: 'left', verticalAlign: 'top', x: 10, y: 20, useHTML: true
-                },
-                xAxis: { categories: rfqCodes, crosshair: true },
-                yAxis: { min: 0, title: { text: 'Count' } },
-                tooltip: { shared: true },
-                plotOptions: { column: { grouping: true, shadow: false, borderWidth: 0 } },
-                series: [
-                    { name: 'Vendors Invited', data: invitedData, color: '#007bff' },
-                    { name: 'Vendors Responded', data: respondedData, color: '#28a745' }
-                ]
-            });
-        }
+        //function buildChart(rfqCodes, invitedData, respondedData, totalRFQs) {
+        //    rfqChart = Highcharts.chart('rfqBarChart', {
+        //        chart: { type: 'column' },
+        //        title: { text: null },
+        //        subtitle: {
+        //            text: '<span style="font-size:32px; font-weight:bold;">Total RFQs: ' + totalRFQs + '</span>',
+        //            align: 'left', verticalAlign: 'top', x: 10, y: 20, useHTML: true
+        //        },
+        //        xAxis: { categories: rfqCodes, crosshair: true },
+        //        yAxis: { min: 0, title: { text: 'Count' } },
+        //        tooltip: { shared: true },
+        //        plotOptions: { column: { grouping: true, shadow: false, borderWidth: 0 } },
+        //        series: [
+        //            { name: 'Vendors Invited', data: invitedData, color: '#007bff' },
+        //            { name: 'Vendors Responded', data: respondedData, color: '#28a745' }
+        //        ]
+        //    });
+        //}
 
-        function updateChart() {
-            var rfqData = [];
-            table.rows({ filter: 'applied' }).every(function () {
-                var d = this.data();
-                var addedDateStr = d[5];
-                var parts = addedDateStr.split("-");
-                var addedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-                var responded = parseInt(d[7]) || 0;
-                if (responded > 0) {
-                    rfqData.push({
-                        rfqCode: d[2],
-                        invited: parseInt(d[6]) || 0,
-                        responded: responded,
-                        date: addedDate
-                    });
-                }
-            });
+        //function updateChart() {
+        //    var rfqData = [];
+        //    table.rows({ filter: 'applied' }).every(function () {
+        //        var d = this.data();
+        //        var addedDateStr = d[6];
+        //        var parts = addedDateStr.split("-");
+        //        var addedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+        //        var responded = parseInt(d[8]) || 0;
+        //        if (responded > 0) {
+        //            rfqData.push({
+        //                rfqCode: d[3],
+        //                invited: parseInt(d[7]) || 0,
+        //                responded: responded,
+        //                date: addedDate
+        //            });
+        //        }
+        //    });
 
-            rfqData.sort((a, b) => b.date - a.date);
-            var chartData = rfqData.slice(0, 15);
+        //    rfqData.sort((a, b) => b.date - a.date);
+        //    var chartData = rfqData.slice(0, 15);
 
-            var rfqCodes = chartData.map(x => x.rfqCode);
-            var invitedData = chartData.map(x => x.invited);
-            var respondedData = chartData.map(x => x.responded);
-            var totalRFQs = table.rows({ filter: 'applied' }).count();
+        //    var rfqCodes = chartData.map(x => x.rfqCode);
+        //    var invitedData = chartData.map(x => x.invited);
+        //    var respondedData = chartData.map(x => x.responded);
+        //    var totalRFQs = table.rows({ filter: 'applied' }).count();
 
-            if (rfqChart) {
-                rfqChart.xAxis[0].setCategories(rfqCodes, false);
-                rfqChart.series[0].setData(invitedData, false);
-                rfqChart.series[1].setData(respondedData, false);
-                rfqChart.setSubtitle({
-                    text: '<span style="font-size:32px; font-weight:bold;">Total RFQs: ' + totalRFQs + '</span>',
-                    align: 'left', verticalAlign: 'top', x: 10, y: 20, useHTML: true
-                });
-                rfqChart.redraw();
-            } else {
-                buildChart(rfqCodes, invitedData, respondedData, totalRFQs);
-            }
-        }
+        //    if (rfqChart) {
+        //        rfqChart.xAxis[0].setCategories(rfqCodes, false);
+        //        rfqChart.series[0].setData(invitedData, false);
+        //        rfqChart.series[1].setData(respondedData, false);
+        //        rfqChart.setSubtitle({
+        //            text: '<span style="font-size:32px; font-weight:bold;">Total RFQs: ' + totalRFQs + '</span>',
+        //            align: 'left', verticalAlign: 'top', x: 10, y: 20, useHTML: true
+        //        });
+        //        rfqChart.redraw();
+        //    } else {
+        //        buildChart(rfqCodes, invitedData, respondedData, totalRFQs);
+        //    }
+        //}
 
-        updateChart();
-        table.on('draw', function () { updateChart(); });
+        //updateChart();
+        //table.on('draw', function () { updateChart(); });
 
 
         // ✅ Utility: show warning toast
@@ -573,6 +937,17 @@
         }
 
 
+        $('#dateRange').on('cancel.daterangepicker', function () {
+            var now = moment();
+
+            startDate = now.clone().startOf('month').toDate();
+            endDate = now.clone().endOf('month').toDate();
+
+            $('#reportHeading').text(now.format('MMMM YYYY'));
+
+            table.draw();
+            //updateChart();
+        });
 
 
         //modal table
@@ -580,26 +955,79 @@
         $(document).on('click', '.view-vendors', function () {
             var rfqCode = $(this).data('rfqcode');
 
+            // 🟦 Show RFQ Code at top of modal
+            $('#lblRFQCode').text(rfqCode);
+
+
             $.ajax({
                 url: '/Purchase/GetRFQVendorResponses',
                 type: 'GET',
-                data: { rfqCode: rfqCode },
+                data: { rfqCode: rfqCode, _: new Date().getTime() }, // 🧠 cache buster
                 success: function (res) {
                     if (res.success) {
-                        var tbody = $('#rfqVendorTable tbody');
-                        tbody.empty();
+                        var $table = $('#rfqVendorTable');
+                        var $tbody = $table.find('tbody');
+                        $tbody.empty(); // clear old rows
 
+                        // 🔹 Destroy existing DataTable cleanly
+                        if ($.fn.DataTable.isDataTable($table)) {
+                            $table.DataTable().clear().destroy();
+                            $table.find('thead th').removeClass('sorting sorting_asc sorting_desc');
+                        }
+
+                        // 🔹 Add new rows with status color
                         $.each(res.data, function (i, item) {
-                            tbody.append(`
-                        <tr>
-                            <td>${item.RegisterQuotationCode}</td>
-                            <td>${item.VendorName}</td>
-                            <td>${item.DaysToReceiveQuotation}</td>
-                            <td>${item.DaysToApproveQuotation}</td>
-                        </tr>
-                    `);
+                            let statusBadge = `
+        <span class="${item.StatusName === 'Approved' ? 'badge bg-success' :
+                                    item.StatusName === 'Pending' ? 'badge bg-warning' :
+                                        item.StatusName === 'Escalated' ? 'badge bg-primary' :
+                                            item.StatusName === 'Rejected' ? 'badge bg-danger' :
+                                                'badge bg-secondary'
+                                }">
+            ${item.StatusName}
+        </span>
+                            `;
+
+
+                    //        $tbody.append(`
+                    //    <tr>
+                    //        <td>${i + 1}</td>
+                    //        <td>${item.RegisterQuotationCode}</td>
+                    //        <td>${item.VendorName}</td>
+                    //        <td>${item.QuotationDate
+                    //                ? moment(item.QuotationDate).format('DD/MM/YYYY')
+                    //                : ''}</td>
+                    //        <td>${item.DaysToApproveQuotation ?? ''}</td>
+                    //        <td class="text-center">${statusBadge}</td>
+                    //    </tr>
+                            //`);
+                            $tbody.append(`
+<tr>
+    <td>${i + 1}</td>
+    <td>${item.RegisterQuotationCode}</td>
+    <td>${item.VendorName}</td>
+    <td>${item.QuotationDateAT? moment(item.QuotationDateAT).format('DD/MM/YYYY'): ''}</td>
+    <td>${item.DaysToApproveQuotation ?? ''}</td>
+    <td class="text-center">${statusBadge}</td>
+</tr>
+`);
+
                         });
 
+                        // 🔹 Reinitialize DataTable (with desired settings)
+                        $table.DataTable({
+                            scrollX: true,
+                            paging: false,
+                            searching: false,
+                            ordering: false,
+                            info: false,
+                            destroy: true,
+                            columnDefs: [
+                                { className: 'text-center', targets: '_all' }
+                            ]
+                        });
+
+                        // 🔹 Finally, show modal
                         $('#rfqVendorModal').modal('show');
                     } else {
                         toastr.error(res.message || 'No data found.');
@@ -610,6 +1038,8 @@
                 }
             });
         });
+
+
 
 
     });

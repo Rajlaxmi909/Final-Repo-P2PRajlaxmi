@@ -10,8 +10,56 @@ using P2PHelper;
 namespace P2PLibray.GRN
 {
 
-   
-    public class BALGRN
+    public class GRNBase
+    {
+        protected MSSQL obj = new MSSQL();
+
+        // Simple reusable abstraction for SP with DataReader
+        protected async Task<SqlDataReader> Read(string flag, Dictionary<string, string> extra = null)
+        {
+            var param = new Dictionary<string, string> { { "@Flag", flag } };
+            if (extra != null)
+            {
+                foreach (var kv in extra)
+                    param.Add(kv.Key, kv.Value);
+            }
+            return await obj.ExecuteStoredProcedureReturnDataReader("GRNProcedure", param);
+        }
+
+        // SP with DataSet
+        protected async Task<DataSet> ReadDS(string flag, Dictionary<string, string> extra = null)
+        {
+            var param = new Dictionary<string, string> { { "@Flag", flag } };
+            if (extra != null)
+            {
+                foreach (var kv in extra)
+                    param.Add(kv.Key, kv.Value);
+            }
+            return await obj.ExecuteStoredProcedureReturnDS("GRNProcedure", param);
+        }
+
+        // SP Execute (insert/update/delete)
+        protected async Task Exec(string flag, Dictionary<string, string> extra = null)
+        {
+            var param = new Dictionary<string, string> { { "@Flag", flag } };
+            if (extra != null)
+            {
+                foreach (var kv in extra)
+                    param.Add(kv.Key, kv.Value);
+            }
+            await obj.ExecuteStoredProcedure("GRNProcedure", param);
+        }
+
+        // Polymorphism example (overridable)
+        protected virtual void Log(string msg)
+        {
+            // optional - can be extended
+            Console.WriteLine(msg);
+        }
+    }
+
+
+    public class BALGRN: GRNBase
     {
 
         MSSQL obj = new MSSQL();
@@ -23,12 +71,9 @@ namespace P2PLibray.GRN
         /// <returns>SqlDataReader containing rejected goods data.</returns>
         public async Task<SqlDataReader> GetRejectedGoods()
         {
-            Dictionary<string, string> param = new Dictionary<string, string>
-            {
-                { "@Flag", "GSTtblGoodsReturnHSB" }
-            };
-            return await obj.ExecuteStoredProcedureReturnDataReader("GRNProcedure", param);
+            return await Read("GSTtblGoodsReturnHSB");
         }
+
 
         /// <summary>
         /// Gets the list of returned goods.
@@ -36,12 +81,9 @@ namespace P2PLibray.GRN
         /// <returns>SqlDataReader containing returned goods data.</returns>
         public async Task<SqlDataReader> GetReturnGoods()
         {
-            Dictionary<string, string> param = new Dictionary<string, string>
-            {
-                { "@Flag", "ReturnListHSB" }
-            };
-            return await obj.ExecuteStoredProcedureReturnDataReader("GRNProcedure", param);
+            return await Read("ReturnListHSB");
         }
+
 
         /// <summary>
         /// Gets GRN details along with its items for in-stock goods.
@@ -441,10 +483,10 @@ namespace P2PLibray.GRN
         /// Retrieves goods return summary details.
         /// </summary>
         /// <returns>A DataTable containing goods return summary data.</returns>
-        public async Task<DataTable> GoodsReturnSummaryPSM()
+        public async Task<DataTable> GoodsReturnPieChartPSM()
         {
             Dictionary<string, string> param = new Dictionary<string, string>();
-            param.Add("@Flag", "GoodsReturnSummaryPSM");
+            param.Add("@Flag", "GoodsReturnPieChartPSM");
             DataSet ds = await obj.ExecuteStoredProcedureReturnDS("GRNProcedure", param);
             return ds.Tables[0];
         }
@@ -498,11 +540,68 @@ namespace P2PLibray.GRN
             DataSet ds = await obj.ExecuteStoredProcedureReturnDS("GRNProcedure", param);
             return ds.Tables[0];
         }
+        /// <summary>
+        /// Retrieves approved PO items for a given PO code.
+        /// </summary>
+        /// <param name="RQCode">The PO code to filter items.</param>
+        /// <returns>A DataTable containing approved PO items.</returns>
+        public async Task<DataTable> RegistrationQuotationCodePSM(string RQCode)
+        {
+            Dictionary<string, string> param = new Dictionary<string, string>();
+            if (RQCode.Contains("PO"))
+                param.Add("@Flag", "RegistrationQuotationCodePSM");
+            else
+                param.Add("@Flag", "RegistrationQuotationCode2PSM");
+            param.Add("@RegistrationQuotationCode", RQCode);
+            DataSet ds = await obj.ExecuteStoredProcedureReturnDS("GRNProcedure", param);
+            return ds?.Tables?.Count > 0 ? ds.Tables[0] : new DataTable();
+        }
+
 
         #endregion
 
 
         #region Rushikesh
+
+
+        /// <summary>
+        /// Retrieves GRN items by GRN Code
+        /// </summary>
+        public async Task<List<GRN>> GetGRNItemsByGRNCode(string grnCode)
+        {
+            Dictionary<string, string> para = new Dictionary<string, string>();
+            para.Add("@Flag", "GRNItemsListbyGRNCodeRHK");
+            para.Add("@GRNCode", grnCode);
+
+            DataSet ds = await obj.ExecuteStoredProcedureReturnDS(
+                "GRNProcedure", para);
+
+            List<GRN> list = new List<GRN>();
+
+            if (ds.Tables.Count > 0)
+            {
+                foreach (DataRow dr in ds.Tables[0].Rows)
+                {
+                    list.Add(new GRN
+                    {
+                        GRNCode = dr["GRNCode"].ToString(),
+                        UOMName = dr["UOMName"].ToString(),
+                        ItemCode = dr["ItemCode"].ToString(),
+                        ItemName = dr["ItemName"].ToString(),
+                        Quantity = Convert.ToInt32(dr["Quantity"]),
+                        QualityCheckCode = dr["ISQuality"].ToString()
+                    });
+                }
+            }
+
+            return list;
+        }
+
+
+
+
+
+
         /// <summary>
         /// Returns total number of GRNs created in the given date range.
         /// Calls GRNProcedure with Flag = 'TotalGRNRHK'.
@@ -579,6 +678,25 @@ namespace P2PLibray.GRN
             return dt;
         }
 
+
+        /// <summary>
+        /// Returns count of approved QC items (StatusId = 14) in date range.
+        /// Calls GRNProcedure with Flag = 'ApproveCountRHK'.
+        /// </summary>
+        public async Task<DataTable> PendingCountRHK(DateTime? startDate, DateTime? endDate)
+        {
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("@Flag", "PendingCountRHK");
+            parameters.Add("@StartDate", startDate.HasValue ? startDate.Value.ToString("yyyy-MM-dd") : null);
+            parameters.Add("@EndDate", endDate.HasValue ? endDate.Value.ToString("yyyy-MM-dd") : null);
+
+            DataTable dt = new DataTable();
+            using (SqlDataReader dr = await obj.ExecuteStoredProcedureReturnDataReader("GRNProcedure", parameters))
+            {
+                dt.Load(dr);
+            }
+            return dt;
+        }
         /// <summary>
         /// Returns count of items assigned for QC in date range.
         /// Calls GRNProcedure with Flag = 'QCAssignedCountRHK'.
@@ -757,7 +875,7 @@ namespace P2PLibray.GRN
         public async Task<DataTable> PendingItemsRHK(DateTime? startDate, DateTime? endDate)
         {
             Dictionary<string, string> parameters = new Dictionary<string, string>();
-            parameters.Add("@Flag", "QCAssignedItemsRHK");
+            parameters.Add("@Flag", "PendingItemsRHK");
             parameters.Add("@StartDate", startDate.HasValue ? startDate.Value.ToString("yyyy-MM-dd") : null);
             parameters.Add("@EndDate", endDate.HasValue ? endDate.Value.ToString("yyyy-MM-dd") : null);
             DataTable dt = new DataTable();
@@ -977,13 +1095,16 @@ namespace P2PLibray.GRN
         /// </summary>
         /// <param name="objGRN">GRN object containing GRN code and added by details.</param>
         /// <returns>Number of inserted QC records.</returns>
-        public async Task<int> AssignQCSSG(GRN objGRN)
+        public async Task<int> AssignQCSSG(GRN objGRN, string staffcode)
         {
             try
             {
                 Dictionary<string, string> param = new Dictionary<string, string>();
-                param.Add("@Flag", "AssignQC");
+                param.Add("@Flag", "AssignQCSSG");
                 param.Add("@GRNCode", objGRN.GRNCode);
+                param.Add("@AddedDate", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                param.Add("@AddedBy", staffcode);
+
 
                 DataSet ds = await obj.ExecuteStoredProcedureReturnDS("GRNProcedure", param);
                 if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
